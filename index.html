@@ -144,6 +144,7 @@ textarea.io{width:100%;min-height:120px;border:1px solid var(--line);border-radi
 .stayt td.mono{text-align:right}
 .stayt th{font-size:11.5px;color:var(--ink3);letter-spacing:.05em}
 .fine{font-size:12px;color:var(--ink3);margin-top:8px}
+.mailrow{display:grid;grid-template-columns:auto auto 1fr;gap:6px 10px;align-items:baseline;padding:6px 8px;border-bottom:1px solid var(--line2);font-size:13px;cursor:pointer} .mailrow .subj{font-weight:700} .mailrow .from{grid-column:2/-1;font-size:12px;color:var(--ink3)} .mailtrip{margin-top:10px;padding:4px 8px;background:var(--surface2);border-radius:6px;font-size:13px} #mailStatus{font-size:13.5px;margin-top:8px;color:var(--ink2)} #mailStatus.busy{color:var(--accent)} #mailStatus.busy::before{content:"● "}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.show{opacity:1}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
@@ -171,6 +172,18 @@ textarea.io{width:100%;min-height:120px;border:1px solid var(--line);border-radi
   <div class="legend"><span class="l-hotel">ホテル・滞在先</span><span class="l-air">機内泊・空港泊（夜行便）</span><span class="l-gap">空白（予約なし）</span><span class="l-warn">要確認（二重・ムダ泊）</span></div>
 </section>
 
+<section class="card" id="mailBox" hidden>
+  <h2>メールから取り込む <span class="hint">Gmailの予約メールをClaudeが読んで、便とホテルを入れます（読むだけ・送信や削除はしません）</span></h2>
+  <div class="formrow">
+    <label style="font-size:13px">探す期間　<select id="mailDays"><option value="30">直近30日</option><option value="60" selected>直近60日</option><option value="90">直近90日</option><option value="180">直近180日</option></select></label>
+    <button class="btn primary" id="btnMailSearch">① 予約メールを探す</button>
+    <button class="btn" id="btnMailRead" hidden>② 選んだメールを読む</button>
+    <button class="btn primary" id="btnMailMerge" hidden>③ 取り込む</button>
+  </div>
+  <div id="mailStatus" class="fine">この機能は、claude.ai の公開ページで Gmail を接続している時だけ使えます。</div>
+  <div id="mailList"></div>
+  <div id="mailExtract"></div>
+</section>
 <div class="cols">
   <div>
     <section class="card">
@@ -761,6 +774,125 @@ $("#btnCopyText").addEventListener("click",async()=>{
   try{ await navigator.clipboard.writeText(txt); toast("コピーしました"); }catch(e){ $("#io").value=txt; $("#io").select(); toast("下の欄に出しました。コピーしてください"); }
 });
 let toastT; function toast(m){ const el=$("#toast"); el.textContent=m; el.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),2400); }
+
+/* ---------- メール取り込み（公開ページでGmail連携＋Claudeが使える時だけ） ---------- */
+const MAIL = {mcp:null, sample:null, threads:[], extracted:null};
+const MAIL_QUERY = (days)=>`newer_than:${days}d (from:anarsv@121.ana.co.jp OR from:anaintrsv@mail.ana.co.jp OR from:jal.co.jp OR from:res-marriott.com OR from:email-marriott.com OR from:travel.rakuten.co.jp OR from:hilton.com OR from:booking.com OR from:agoda.com OR from:expedia.co.jp OR from:hotels.com OR from:airbnb.com OR from:ihg.com OR from:hyatt.com OR category:reservations) -from:anamagazine -subject:(セール OR キャンペーン OR おトク OR マガジン)`;
+const MAIL_YES = /eチケット|予約確認|予約完了|予約内容|Confirmation|確認番号|アップグレード|チェックインのご案内|出発時刻変更|変更のお知らせ|取消|キャンセル|Cancellation|Reservation|Booking|itinerary/i;
+const MAIL_NO = /セール|キャンペーン|おトク|ご搭乗ありがとう|搭乗案内開始|バウチャー|Plan for your upcoming|Folio|Check-In Instructions|make your upcoming trip|Travel Hint|ラウンジ|Nightly Upgrade Awards Request/i;
+function mailPayload(r){ if(r && r.payload!==undefined) return r.payload; try{ const t=(r.content||[]).find(c=>c.type==="text"); return t? JSON.parse(t.text) : null; }catch(e){ return null; } }
+function mailErr(e){
+  const c=e&&e.code;
+  if(c==="server_not_connected"||c==="not_granted") return "Gmailがこの画面に接続されていません。claude.ai の設定で Gmail コネクタを接続し、この画面を開き直してください。";
+  if(c==="needs_reauth") return "Gmailの接続が切れています。claude.ai の設定で Gmail を接続し直してください。";
+  if(c==="cancelled") return "中止しました。";
+  if(c==="rate_limited") return "少し時間をおいてから、もう一度押してください。";
+  return "うまくいきませんでした（"+esc(c||"")+"）。もう一度試すか、PCで取り込んでください。";
+}
+function cleanMail(txt){
+  return String(txt||"")
+    .replace(/\]\(https?:\/\/[^)]*\)/g,"]").replace(/https?:\/\/\S+/g,"")
+    .replace(/^\s*\|[\s|\-]*\|?\s*$/gm,"").replace(/\|/g," ")
+    .replace(/[ \t　]+/g," ").replace(/\n{3,}/g,"\n\n").trim().slice(0,7000);
+}
+async function mailInit(){
+  const box=$("#mailBox"); if(!box) return;
+  try{
+    const [mcp,sample]=await Promise.all([claude.use("mcp"),claude.use("sample")]);
+    MAIL.mcp=mcp; MAIL.sample=sample;
+  }catch(e){}
+  if(MAIL.mcp && MAIL.sample){ box.hidden=false; }
+}
+if(typeof window!=="undefined" && window.claude && typeof window.claude.use==="function"){ mailInit(); }
+
+function mailStatus(msg, busy){ const el=$("#mailStatus"); el.innerHTML=msg; el.classList.toggle("busy",!!busy); }
+async function mailSearch(){
+  const days=+$("#mailDays").value||60;
+  mailStatus("予約メールを探しています…",true); $("#mailList").innerHTML=""; $("#mailExtract").innerHTML=""; MAIL.extracted=null;
+  try{
+    const r=await MAIL.mcp.callTool("Gmail","search_threads",{query:MAIL_QUERY(days),pageSize:50});
+    const p=mailPayload(r)||{}; const threads=Array.isArray(p.threads)?p.threads:[];
+    MAIL.threads=threads.map(t=>{ const m=(t.messages||[])[0]||{}; const last=(t.messages||[]).slice(-1)[0]||m; return {id:t.id||m.threadId, subject:m.subject||"(件名なし)", sender:m.sender||"", date:(last.date||m.date||"").slice(0,10), snippet:m.snippet||""}; }).filter(t=>t.id);
+    if(!MAIL.threads.length){ mailStatus(`直近${days}日に予約らしいメールが見つかりませんでした。期間を広げてみてください。`); return; }
+    $("#mailList").innerHTML = `<div class="fine">見つかった ${MAIL.threads.length} 通。予約の確定・変更・取消らしいものに最初からチェックが入っています。読むものを選んで「読む」を押してください。</div>` +
+      MAIL.threads.map((t,i)=>{ const on = MAIL_YES.test(t.subject) && !MAIL_NO.test(t.subject); return `<label class="mailrow"><input type="checkbox" data-i="${i}" ${on?"checked":""}><span class="mono">${esc(t.date)}</span><span class="subj">${esc(t.subject)}</span><span class="from">${esc(t.sender.replace(/<.*/,""))}</span></label>`; }).join("");
+    mailStatus(`${MAIL.threads.length} 通見つかりました。`);
+    $("#btnMailRead").hidden=false;
+  }catch(e){ mailStatus(mailErr(e)); }
+}
+async function mailRead(){
+  const picks=[...document.querySelectorAll("#mailList input:checked")].map(i=>MAIL.threads[+i.dataset.i]);
+  if(!picks.length){ mailStatus("読むメールにチェックを入れてください。"); return; }
+  if(picks.length>12){ mailStatus("一度に読めるのは12通までです。チェックを減らしてください。"); return; }
+  $("#mailExtract").innerHTML=""; MAIL.extracted=null;
+  const bodies=[];
+  for(let k=0;k<picks.length;k++){
+    const t=picks[k]; mailStatus(`メールを読んでいます… ${k+1}/${picks.length}`,true);
+    try{
+      const r=await MAIL.mcp.callTool("Gmail","get_thread",{threadId:t.id,messageFormat:"PLAIN_TEXT"});
+      const p=mailPayload(r)||{}; const msgs=Array.isArray(p.messages)?p.messages:[];
+      const body=msgs.map(m=>cleanMail(m.plaintextBody||m.snippet||"")).join("\n---\n").slice(0,9000);
+      bodies.push(`### メール${k+1}｜件名: ${t.subject}｜受信日: ${t.date}｜差出人: ${t.sender}\n${body}`);
+    }catch(e){ mailStatus(mailErr(e)); return; }
+  }
+  const today=fd(Date.now());
+  const rules=`あなたは旅行手配のアシスタントです。下のメール群から、飛行機とホテルの予約を抜き出し、JSONだけを出力してください（説明文なし）。
+ルール：
+- 日付は必ず「現地の日付」YYYY-MM-DD、時刻は「現地時刻・24時間表記」HH:MM。今日は ${today}。年が書いていない日付は、受信日から見て次に来る年にする。
+- 深夜0〜6時発の便は「時刻表の日付」を出発日にする。到着日は書いてある通り（推測で+1日しない）。ANAの本文が「19:00発17:15着」のように日付を省く場合、出発地と到着地の時差で翌日着かを判断する。
+- 空港はIATA3文字（羽田HND・成田NRT・北九州KKJ・福岡FUK・関西KIX・ソウル金浦GMP・仁川ICN・香港HKG・ロンドンヒースローLHR・バンコクBKK・シンガポールSIN・台北桃園TPE・ロサンゼルスLAX）。ホテルの airport は最寄り空港コード。
+- 予約番号（PNR・確認番号）は原文どおり。無ければ ""。人数は分かる範囲で（不明なら 1）。
+- 同じ予約が複数のメールにあれば1つにまとめ、いちばん新しいメールの内容を使う。「キャンセル」「取消」のメールに該当する予約は出さず、cancelled に入れる。
+- 広告・案内だけのメールは無視。分からない項目は "" にする。
+- note には「出典: 件名（受信日）」を必ず書く。
+出力形式：
+{"trips":[{"name":"旅程名（例：香港出張 2026-10）","pax":2,"items":[
+ {"type":"flight","airline":"NH","number":"813","from":"HND","to":"HKG","depDate":"2026-10-03","depTime":"01:35","arrDate":"2026-10-03","arrTime":"05:15","pnr":"","pax":2,"note":"出典: …"},
+ {"type":"hotel","kind":"hotel","name":"ホテル名","airport":"HKG","checkin":"2026-10-03","checkout":"2026-10-04","conf":"","guests":2,"note":"出典: …"}]}],
+ "cancelled":["…"],"unknown":["読み取れなかった項目の説明"]}
+旅程名は、近い日付の便とホテルをまとめて1つにし、「行き先 YYYY-MM」の形にする。`;
+  mailStatus("Claudeが読み取っています…（10〜60秒）",true);
+  try{
+    const data=await MAIL.sample.json(rules+"\n\n"+bodies.join("\n\n"),{modelTier:"default",cache:false,onText:({text})=>{ mailStatus(`Claudeが読み取っています…（${text.length}文字）`,true); }});
+    const db=sanitizeDB({trips:(data&&data.trips)||[]});
+    if(!db || !db.trips.some(t=>t.items.length)){ mailStatus("予約を読み取れませんでした。"+((data&&data.unknown&&data.unknown.length)?"不明だった点："+esc(data.unknown.join(" / ")):"")); return; }
+    MAIL.extracted=db;
+    let html=`<div class="fine">読み取った内容です。<b>原文と見比べて</b>、入れるものにチェックを付け「取り込む」を押してください。</div>`;
+    db.trips.forEach((t,ti)=>{ html+=`<div class="mailtrip"><b>${esc(t.name)}</b>（${t.pax}名）</div>`; t.items.forEach((it,ii)=>{
+      const desc = it.type==="flight" ? `${esc(it.airline)}${esc(it.number)} ${esc(apName(it.from))} ${jd(it.depDate)} ${esc(it.depTime)} → ${esc(apName(it.to))} ${jd(it.arrDate)} ${esc(it.arrTime)}${it.pnr?"　予約番号 "+esc(it.pnr):"　<span class='tag miss'>予約番号なし</span>"}` : `${esc(it.name)}（${esc(apName(it.airport))}） ${jd(it.checkin)} → ${jd(it.checkout)}${it.conf?"　予約番号 "+esc(it.conf):"　<span class='tag miss'>予約番号なし</span>"}`;
+      html+=`<label class="mailrow"><input type="checkbox" checked data-t="${ti}" data-i="${ii}"><span class="subj">${desc}</span><span class="from">${esc(it.note||"")}</span></label>`; }); });
+    if(data.cancelled&&data.cancelled.length) html+=`<div class="fine">キャンセル済みとして除外：${esc(data.cancelled.join(" / "))}</div>`;
+    if(data.unknown&&data.unknown.length) html+=`<div class="fine">読み取れなかった点：${esc(data.unknown.join(" / "))}</div>`;
+    $("#mailExtract").innerHTML=html; $("#btnMailMerge").hidden=false; mailStatus("読み取り完了。内容を確認してください。");
+  }catch(e){ mailStatus(e&&e.code==="invalid_json"?"読み取り結果の形が崩れました。メールを減らしてもう一度。":mailErr(e)); }
+}
+function mailMerge(){
+  if(!MAIL.extracted) return;
+  const picks=[...document.querySelectorAll("#mailExtract input:checked")];
+  if(!picks.length){ mailStatus("取り込むものにチェックを入れてください。"); return; }
+  const key=i=>i.type==="flight"?`F|${i.airline}${i.number}|${i.depDate}`:(i.conf?`H|${i.conf}`:`H|${i.name}|${i.checkin}`);
+  const dateOf=i=>i.type==="flight"?i.depDate:i.checkin;
+  const range=t=>{ const ds=t.items.map(i=>i.type==="flight"?[i.depDate,i.arrDate]:[i.checkin,i.checkout]).flat().sort(); return ds.length?[ds[0],ds[ds.length-1]]:null; };
+  let added=0, updated=0, made=0;
+  for(const el of picks){
+    const st=MAIL.extracted.trips[+el.dataset.t], it={...st.items[+el.dataset.i]};
+    let found=null; for(const t of DB.trips) for(const x of t.items) if(key(x)===key(it)) found=x;
+    if(found){ for(const k of Object.keys(it)){ if(k==="id") continue; if(it[k]!==undefined && it[k]!=="" && it[k]!==found[k]) found[k]=it[k]; } updated++; continue; }
+    let t=DB.trips.find(x=>x.name===st.name);
+    if(!t){ const d=dateOf(it); t=DB.trips.find(x=>{ const r=range(x); return r && diffDays(r[0],d)>=-3 && diffDays(d,r[1])>=-3; }); }
+    if(!t){ t={id:uid(),name:st.name||`${dateOf(it).slice(0,7)} 旅程（メール取り込み）`,pax:st.pax||2,passport:trip().passport||"",alliance:"SA",items:[]}; DB.trips.push(t); made++; }
+    it.id=uid(); t.items.push(it); added++;
+  }
+  DB.trips.sort((a,b)=>{ const ra=range(a), rb=range(b); return (ra?ra[0]:"")<(rb?rb[0]:"")?-1:1; });
+  DB.stamp=new Date().toISOString();
+  const lastTrip = DB.trips.find(x=>x.items.some(i=>picks.some(p=>MAIL.extracted.trips[+p.dataset.t].items[+p.dataset.i].depDate===i.depDate||MAIL.extracted.trips[+p.dataset.t].items[+p.dataset.i].checkin===i.checkin)));
+  if(lastTrip) DB.active=lastTrip.id;
+  MAIL.extracted=null; $("#mailExtract").innerHTML=""; $("#btnMailMerge").hidden=true;
+  render(); mailStatus(`取り込みました：追加 ${added}・更新 ${updated}${made?`・新しい旅程 ${made}`:""}。右の検査結果を見てください。`); toast("取り込みました");
+}
+$("#btnMailSearch").addEventListener("click",mailSearch);
+$("#btnMailRead").addEventListener("click",mailRead);
+$("#btnMailMerge").addEventListener("click",mailMerge);
 
 /* ホーム画面アプリ（PWA）：ふつうのWebサーバーに置いた時だけ有効。file:// や公開ページでは何もしない */
 if(location.protocol.startsWith("http") && "serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
