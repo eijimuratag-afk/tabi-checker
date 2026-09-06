@@ -1,0 +1,768 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>旅のチェッカー</title>
+<meta name="theme-color" content="#0E5E8A">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="旅のチェッカー">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --surface2:#E9EDF2; --line:#CDD5DF; --line2:#E2E7EE;
+  --ink:#16202B; --ink2:#4B5B6B; --ink3:#7A8899;
+  --accent:#0E5E8A; --accent-ink:#FFFFFF; --accent-soft:#DCEBF4;
+  --crit:#B8322A; --crit-soft:#F8E1DF; --warn:#A96F00; --warn-soft:#F7ECD0; --info:#2F6C8E; --info-soft:#DDEBF3; --ok:#2C7A4B; --ok-soft:#DDEFE3;
+  --air:#5B6E86; --air-soft:#E4E9F0;
+  --shadow:0 1px 2px rgba(22,32,43,.06),0 6px 20px rgba(22,32,43,.06);
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --disp:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",sans-serif;
+  --body:"BIZ UDPGothic","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121821; --surface:#1B232E; --surface2:#232D3A; --line:#34404F; --line2:#2A3441;
+    --ink:#E8EDF3; --ink2:#AEBAC8; --ink3:#7E8B9A;
+    --accent:#6FB3DA; --accent-ink:#0E1A24; --accent-soft:#1E3547;
+    --crit:#F08A80; --crit-soft:#4A2320; --warn:#E8B85A; --warn-soft:#45351A; --info:#82B7D6; --info-soft:#1F3444; --ok:#7FC79A; --ok-soft:#1F3B2A;
+    --air:#9FB0C4; --air-soft:#28323F;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121821; --surface:#1B232E; --surface2:#232D3A; --line:#34404F; --line2:#2A3441;
+  --ink:#E8EDF3; --ink2:#AEBAC8; --ink3:#7E8B9A;
+  --accent:#6FB3DA; --accent-ink:#0E1A24; --accent-soft:#1E3547;
+  --crit:#F08A80; --crit-soft:#4A2320; --warn:#E8B85A; --warn-soft:#45351A; --info:#82B7D6; --info-soft:#1F3444; --ok:#7FC79A; --ok-soft:#1F3B2A;
+  --air:#9FB0C4; --air-soft:#28323F;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--disp);margin:0;text-wrap:balance;line-height:1.3}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 20px 60px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px}
+header h1{font-size:26px;font-weight:700;letter-spacing:.01em}
+header .sub{color:var(--ink2);font-size:13.5px;margin-top:4px}
+.tripbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select.trip{padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:220px}
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700;font-size:13.5px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.btn.small{padding:4px 10px;font-size:12.5px;font-weight:400}
+.btn.danger{color:var(--crit)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:18px}
+.tile{background:var(--surface);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
+.tile .v{font-family:var(--mono);font-size:26px;font-weight:600;line-height:1.1;margin-top:4px}
+.tile .v small{font-size:13px;color:var(--ink2);font-family:var(--body);font-weight:400;margin-left:4px}
+.tile.span{grid-column:1/-1} .tile .row{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;margin-top:4px} .tile .row .mono{font-size:15px} .tile .lbl{font-size:12px;color:var(--ink3)}
+.tile.crit .v{color:var(--crit)} .tile.warn .v{color:var(--warn)} .tile.info .v{color:var(--info)} .tile.ok .v{color:var(--ok)}
+
+section.card{background:var(--surface);border:1px solid var(--line2);border-radius:12px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:18px}
+section.card h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+section.card h2 .hint{font-family:var(--body);font-size:12.5px;color:var(--ink3);font-weight:400}
+
+/* night strip */
+.nights{display:flex;gap:6px;overflow-x:auto;padding:12px 2px 6px;scroll-snap-type:x proximity}
+.night{flex:0 0 118px;border-radius:8px;border:1px solid var(--line2);background:var(--surface2);padding:8px 10px;scroll-snap-align:start;position:relative;min-height:88px}
+.night::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:8px 0 0 8px;background:var(--line)}
+.night .d{font-family:var(--mono);font-size:13px;font-weight:600}
+.night .d .wd{font-family:var(--body);font-weight:400;color:var(--ink2);margin-left:3px;font-size:12px}
+.night .d .wd.sat{color:var(--info)} .night .d .wd.sun{color:var(--crit)}
+.night .s{font-size:11.5px;letter-spacing:.04em;margin-top:4px;font-weight:700}
+.night .n{font-size:12px;color:var(--ink2);line-height:1.35;margin-top:2px;overflow-wrap:anywhere}
+.night.hotel::before{background:var(--ok)} .night.hotel .s{color:var(--ok)}
+.night.air::before{background:var(--air)} .night.air .s{color:var(--air)}
+.night.airport::before{background:var(--air)} .night.airport .s{color:var(--air)}
+.night.gap{background:var(--crit-soft);border-color:var(--crit)} .night.gap::before{background:var(--crit)} .night.gap .s{color:var(--crit)}
+.night.double{background:var(--warn-soft)} .night.double::before{background:var(--warn)} .night.double .s{color:var(--warn)}
+.night.wasted{background:var(--warn-soft)} .night.wasted::before{background:var(--warn)} .night.wasted .s{color:var(--warn)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);margin-top:6px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend .l-hotel::before{background:var(--ok)} .legend .l-air::before{background:var(--air)} .legend .l-gap::before{background:var(--crit)} .legend .l-warn::before{background:var(--warn)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+
+/* itinerary */
+.items{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.item{display:grid;grid-template-columns:6px 1fr auto;gap:0 12px;border:1px solid var(--line2);border-radius:10px;background:var(--surface);overflow:hidden;transition:box-shadow .15s}
+.item.hl{box-shadow:0 0 0 3px var(--accent-soft),0 0 0 4px var(--accent)}
+.item .stripe{background:var(--air)} .item.hotel .stripe{background:var(--ok)}
+.item .body{padding:10px 0 10px 4px;min-width:0}
+.item .top{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.item .code{font-family:var(--mono);font-weight:600;font-size:14px}
+.item .name{font-weight:700}
+.item .meta{font-size:13px;color:var(--ink2);margin-top:2px;display:flex;gap:12px;flex-wrap:wrap}
+.item .meta .mono{color:var(--ink)}
+.item .note{font-size:12.5px;color:var(--ink3);margin-top:3px}
+.item .tag{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--surface2);color:var(--ink2);border:1px solid var(--line2)}
+.item .tag.miss{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.item .acts{display:flex;flex-direction:column;gap:4px;padding:10px 10px 10px 0;justify-content:center}
+.daymark{font-family:var(--mono);font-size:12.5px;color:var(--ink3);margin:8px 0 -2px 2px}
+.daymark .wd{font-family:var(--body)}
+.empty{color:var(--ink3);padding:14px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+
+/* findings */
+.findings{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.f{border-radius:10px;border:1px solid var(--line2);padding:10px 12px 10px 14px;position:relative;background:var(--surface);cursor:pointer}
+.f::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:10px 0 0 10px}
+.f.crit::before{background:var(--crit)} .f.warn::before{background:var(--warn)} .f.info::before{background:var(--info)} .f.ok::before{background:var(--ok)}
+.f .h{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.f .pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:.04em}
+.f.crit .pill{background:var(--crit-soft);color:var(--crit)} .f.warn .pill{background:var(--warn-soft);color:var(--warn)} .f.info .pill{background:var(--info-soft);color:var(--info)} .f.ok .pill{background:var(--ok-soft);color:var(--ok)}
+.f .t{font-weight:700}
+.f .why{font-size:13.5px;color:var(--ink2);margin-top:4px}
+.f .fix{font-size:13.5px;margin-top:4px;padding-left:10px;border-left:2px solid var(--line)}
+.f .fix b{color:var(--accent)}
+.f:hover{border-color:var(--accent)}
+
+/* forms */
+.formgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:10px}
+.formgrid label{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink2)}
+.formgrid input,.formgrid select{padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
+.formgrid input.mono{text-transform:uppercase}
+.formgrid .wide{grid-column:1/-1}
+.formrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.formrow .sp{flex:1}
+.tabs{display:flex;gap:6px;margin-top:8px}
+.tabs button{padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;font-size:13px}
+.tabs button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.side{display:flex;flex-direction:column;gap:18px}
+details.card{background:var(--surface);border:1px solid var(--line2);border-radius:12px;padding:12px 18px;margin-bottom:18px;box-shadow:var(--shadow)}
+details.card summary{font-family:var(--disp);font-weight:700;cursor:pointer;font-size:15px}
+textarea.io{width:100%;min-height:120px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface2);font-family:var(--mono);font-size:12px;margin-top:8px}
+.stayt{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+.stayt th,.stayt td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line2)}
+.stayt td.mono{text-align:right}
+.stayt th{font-size:11.5px;color:var(--ink3);letter-spacing:.05em}
+.fine{font-size:12px;color:var(--ink3);margin-top:8px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <h1>旅のチェッカー</h1>
+    <div class="sub">飛行機とホテルを入れると、宿泊が便と<b>ズレていないか</b>を検証します。「寝る場所がない夜」「到着日とチェックイン日のズレ」「二重予約」「ムダ泊」を自動で見つけます。日付はすべて<b>eチケットに書いてある現地の日付・24時間表記</b>で入れてください（予約サイトが日本時間に変換して見せることがあります）。</div>
+  </div>
+  <div class="tripbar">
+    <select class="trip" id="tripSel" aria-label="旅程を選ぶ"></select>
+    <button class="btn" id="btnNewTrip">＋ 新しい旅程</button>
+    <button class="btn ghost" id="btnRenameTrip">名前変更</button>
+    <button class="btn ghost danger" id="btnDelTrip">削除</button>
+  </div>
+</header>
+
+<div class="tiles" id="tiles"></div>
+
+<section class="card">
+  <h2>夜の地図 <span class="hint">1マス＝1泊。赤いマスは「その夜、寝る場所の予約がない」</span></h2>
+  <div class="nights" id="nights"></div>
+  <div class="legend"><span class="l-hotel">ホテル・滞在先</span><span class="l-air">機内泊・空港泊（夜行便）</span><span class="l-gap">空白（予約なし）</span><span class="l-warn">要確認（二重・ムダ泊）</span></div>
+</section>
+
+<div class="cols">
+  <div>
+    <section class="card">
+      <h2>旅程 <span class="hint" id="tripMeta"></span></h2>
+      <div class="items" id="items"></div>
+      <div class="tabs" id="addTabs">
+        <button data-kind="flight" class="on">＋ 飛行機を追加</button>
+        <button data-kind="hotel">＋ ホテル・滞在先を追加</button>
+      </div>
+      <form id="fFlight" class="fform">
+        <div class="formgrid">
+          <label>航空会社（2文字）<input class="mono" name="airline" placeholder="NH" maxlength="2" required></label>
+          <label>便名（数字）<input class="mono" name="number" placeholder="813" required></label>
+          <label>出発空港（3文字）<input class="mono" name="from" placeholder="HND" maxlength="3" required></label>
+          <label>到着空港（3文字）<input class="mono" name="to" placeholder="HKG" maxlength="3" required></label>
+          <label>出発日（現地）<input type="date" name="depDate" required></label>
+          <label>出発時刻（現地・24時間）<input type="time" name="depTime" required></label>
+          <label>到着日（現地）<input type="date" name="arrDate" required></label>
+          <label>到着時刻（現地・24時間）<input type="time" name="arrTime" required></label>
+          <label>予約番号（PNR・6文字）<input class="mono" name="pnr" placeholder="未購入なら空欄"></label>
+          <label>人数<input type="number" name="pax" min="1" value="2"></label>
+          <label class="wide">メモ<input name="note" placeholder="運賃種別、座席、ラウンジなど"></label>
+        </div>
+        <div class="formrow"><span class="fine">eチケットに書いてある<b>現地時刻</b>をそのまま入れてください。時差の計算はこちらでやります。</span><span class="sp"></span><button type="button" class="btn ghost" data-cancel>取消</button><button class="btn primary" type="submit">保存</button></div>
+      </form>
+      <form id="fHotel" class="fform" hidden>
+        <div class="formgrid">
+          <label class="wide">名前<input name="name" placeholder="ルネッサンス香港ハーバービュー" required></label>
+          <label>種類<select name="kind"><option value="hotel">ホテル</option><option value="rental">民泊・コンドミニアム</option><option value="home">自宅・知人宅・その他</option></select></label>
+          <label>最寄り空港（3文字）<input class="mono" name="airport" placeholder="HKG" maxlength="3" required></label>
+          <label>チェックイン日<input type="date" name="checkin" required></label>
+          <label>チェックアウト日<input type="date" name="checkout" required></label>
+          <label>予約番号<input class="mono" name="conf" placeholder="未予約なら空欄"></label>
+          <label>人数<input type="number" name="guests" min="1" value="2"></label>
+          <label class="wide">メモ<input name="note" placeholder="支払済、クラブラウンジ、依頼済みのことなど"></label>
+        </div>
+        <div class="formrow"><span class="fine">「最寄り空港」で国と時差を判定します。同じ街なら到着空港と同じコードでOK。</span><span class="sp"></span><button type="button" class="btn ghost" data-cancel>取消</button><button class="btn primary" type="submit">保存</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="side">
+    <section class="card">
+      <h2>検査結果 <span class="hint">クリックすると該当の予約が光ります</span></h2>
+      <div class="findings" id="findings"></div>
+    </section>
+
+    <section class="card">
+      <h2>この旅程の設定</h2>
+      <div class="formgrid">
+        <label>人数（基準）<input type="number" id="setPax" min="1"></label>
+        <label>パスポート有効期限<input type="date" id="setPassport"></label>
+        <label>今いる場所（空港コード）<input id="setHere" class="mono" maxlength="3" placeholder="HND" style="text-transform:uppercase"></label>
+        <label>国際線の条件<select id="setAlliance"><option value="SA">スターアライアンス必須</option><option value="">こだわらない</option></select></label>
+      </div>
+      <div class="fine">「今いる場所」を入れると、次の予定を<b>あなたの今の時計</b>に直して上に出します（移動が多いと「明日」「今夜」が1日ズレるため）。設定はこのブラウザに自動保存されます。</div>
+    </section>
+
+    <section class="card">
+      <h2>国別の滞在日数 <span class="hint">保存済みの全旅程から計算</span></h2>
+      <div id="stays"></div>
+      <div class="fine">ビザ免除の上限日数は 2026年9月時点の目安（日本のパスポート）。入国前に外務省・各国の公式情報で確認してください。日本の滞在日数（183日）は税務の目安で、最終判断は税理士へ。</div>
+    </section>
+  </div>
+</div>
+
+<details class="card">
+  <summary>データの持ち出し・読み込み（コピー＆貼り付け）</summary>
+  <div class="formrow">
+    <button class="btn" id="btnCopyText">旅程を文章でコピー（チャットに貼る用）</button>
+    <button class="btn" id="btnExport">全データを書き出す</button>
+    <button class="btn" id="btnImport">貼り付けたデータを読み込む</button>
+    <button class="btn ghost" id="btnDemo">ミスあり旅程を読み込む（練習用）</button>
+  </div>
+  <textarea class="io" id="io" placeholder="「全データを書き出す」を押すとここに出ます。別の端末へ移すときは、これを全部コピーして、向こうで貼り付けて「読み込む」。"></textarea>
+</details>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PRELOAD = null;
+/* ---------- 参照データ ---------- */
+const AIRPORTS = {
+  HND:["Asia/Tokyo","東京(羽田)","JP"],NRT:["Asia/Tokyo","東京(成田)","JP"],KIX:["Asia/Tokyo","大阪(関西)","JP"],ITM:["Asia/Tokyo","大阪(伊丹)","JP"],NGO:["Asia/Tokyo","名古屋","JP"],FUK:["Asia/Tokyo","福岡","JP"],KKJ:["Asia/Tokyo","北九州","JP"],CTS:["Asia/Tokyo","札幌","JP"],OKA:["Asia/Tokyo","沖縄","JP"],HIJ:["Asia/Tokyo","広島","JP"],SDJ:["Asia/Tokyo","仙台","JP"],KOJ:["Asia/Tokyo","鹿児島","JP"],KMJ:["Asia/Tokyo","熊本","JP"],NGS:["Asia/Tokyo","長崎","JP"],OIT:["Asia/Tokyo","大分","JP"],UBJ:["Asia/Tokyo","山口宇部","JP"],KMQ:["Asia/Tokyo","小松","JP"],OKJ:["Asia/Tokyo","岡山","JP"],MYJ:["Asia/Tokyo","松山","JP"],TAK:["Asia/Tokyo","高松","JP"],
+  HKG:["Asia/Hong_Kong","香港","HK"],MFM:["Asia/Macau","マカオ","MO"],TPE:["Asia/Taipei","台北(桃園)","TW"],TSA:["Asia/Taipei","台北(松山)","TW"],KHH:["Asia/Taipei","高雄","TW"],
+  ICN:["Asia/Seoul","ソウル(仁川)","KR"],GMP:["Asia/Seoul","ソウル(金浦)","KR"],PUS:["Asia/Seoul","釜山","KR"],
+  PVG:["Asia/Shanghai","上海(浦東)","CN"],SHA:["Asia/Shanghai","上海(虹橋)","CN"],PEK:["Asia/Shanghai","北京(首都)","CN"],PKX:["Asia/Shanghai","北京(大興)","CN"],CAN:["Asia/Shanghai","広州","CN"],SZX:["Asia/Shanghai","深圳","CN"],
+  SIN:["Asia/Singapore","シンガポール","SG"],BKK:["Asia/Bangkok","バンコク(スワンナプーム)","TH"],DMK:["Asia/Bangkok","バンコク(ドンムアン)","TH"],HKT:["Asia/Bangkok","プーケット","TH"],CNX:["Asia/Bangkok","チェンマイ","TH"],
+  KUL:["Asia/Kuala_Lumpur","クアラルンプール","MY"],PEN:["Asia/Kuala_Lumpur","ペナン","MY"],MNL:["Asia/Manila","マニラ","PH"],CEB:["Asia/Manila","セブ","PH"],
+  SGN:["Asia/Ho_Chi_Minh","ホーチミン","VN"],HAN:["Asia/Ho_Chi_Minh","ハノイ","VN"],DAD:["Asia/Ho_Chi_Minh","ダナン","VN"],CGK:["Asia/Jakarta","ジャカルタ","ID"],DPS:["Asia/Makassar","バリ","ID"],
+  DXB:["Asia/Dubai","ドバイ","AE"],AUH:["Asia/Dubai","アブダビ","AE"],DOH:["Asia/Qatar","ドーハ","QA"],IST:["Europe/Istanbul","イスタンブール","TR"],DEL:["Asia/Kolkata","デリー","IN"],BOM:["Asia/Kolkata","ムンバイ","IN"],
+  SYD:["Australia/Sydney","シドニー","AU"],MEL:["Australia/Melbourne","メルボルン","AU"],BNE:["Australia/Brisbane","ブリスベン","AU"],PER:["Australia/Perth","パース","AU"],AKL:["Pacific/Auckland","オークランド","NZ"],
+  LAX:["America/Los_Angeles","ロサンゼルス","US"],SFO:["America/Los_Angeles","サンフランシスコ","US"],SEA:["America/Los_Angeles","シアトル","US"],SAN:["America/Los_Angeles","サンディエゴ","US"],LAS:["America/Los_Angeles","ラスベガス","US"],
+  JFK:["America/New_York","ニューヨーク(JFK)","US"],EWR:["America/New_York","ニューヨーク(ニューアーク)","US"],BOS:["America/New_York","ボストン","US"],IAD:["America/New_York","ワシントン","US"],MIA:["America/New_York","マイアミ","US"],ATL:["America/New_York","アトランタ","US"],
+  ORD:["America/Chicago","シカゴ","US"],DFW:["America/Chicago","ダラス","US"],IAH:["America/Chicago","ヒューストン","US"],DEN:["America/Denver","デンバー","US"],HNL:["Pacific/Honolulu","ホノルル","US"],
+  YVR:["America/Vancouver","バンクーバー","CA"],YYZ:["America/Toronto","トロント","CA"],
+  LHR:["Europe/London","ロンドン(ヒースロー)","GB"],LGW:["Europe/London","ロンドン(ガトウィック)","GB"],CDG:["Europe/Paris","パリ","FR"],FRA:["Europe/Berlin","フランクフルト","DE"],MUC:["Europe/Berlin","ミュンヘン","DE"],
+  ZRH:["Europe/Zurich","チューリッヒ","CH"],GVA:["Europe/Zurich","ジュネーブ","CH"],VIE:["Europe/Vienna","ウィーン","AT"],AMS:["Europe/Amsterdam","アムステルダム","NL"],BRU:["Europe/Brussels","ブリュッセル","BE"],
+  FCO:["Europe/Rome","ローマ","IT"],MXP:["Europe/Rome","ミラノ","IT"],MAD:["Europe/Madrid","マドリード","ES"],BCN:["Europe/Madrid","バルセロナ","ES"],LIS:["Europe/Lisbon","リスボン","PT"],
+  CPH:["Europe/Copenhagen","コペンハーゲン","DK"],ARN:["Europe/Stockholm","ストックホルム","SE"],HEL:["Europe/Helsinki","ヘルシンキ","FI"],PRG:["Europe/Prague","プラハ","CZ"],WAW:["Europe/Warsaw","ワルシャワ","PL"],BUD:["Europe/Budapest","ブダペスト","HU"],ATH:["Europe/Athens","アテネ","GR"],DUB:["Europe/Dublin","ダブリン","IE"]
+};
+const SCHENGEN = new Set(["FR","DE","CH","AT","NL","BE","IT","ES","PT","DK","SE","FI","CZ","PL","HU","GR"]);
+const COUNTRY = {JP:"日本",HK:"香港",MO:"マカオ",TW:"台湾",KR:"韓国",CN:"中国",SG:"シンガポール",TH:"タイ",MY:"マレーシア",PH:"フィリピン",VN:"ベトナム",ID:"インドネシア",AE:"UAE",QA:"カタール",TR:"トルコ",IN:"インド",AU:"オーストラリア",NZ:"ニュージーランド",US:"アメリカ",CA:"カナダ",GB:"イギリス",IE:"アイルランド",SCHENGEN:"シェンゲン圏(EU主要国)"};
+/* ビザ免除で連続滞在できる日数の目安（日本のパスポート・2026年9月時点・要確認） */
+const STAY_LIMIT = {HK:90,MO:90,TW:90,KR:90,CN:30,SG:90,TH:60,MY:90,PH:30,VN:45,ID:30,AE:30,QA:30,TR:90,AU:90,NZ:90,US:90,CA:180,GB:180,IE:90,SCHENGEN:90};
+const ALLIANCE = {
+  SA:["NH","OZ","UA","SQ","TG","LH","LX","OS","TK","AC","NZ","SK","BR","CA","TP","MS","ET","SA","ZH","A3","AI","AV","CM","LO","OU","SN"],
+  OW:["JL","CX","BA","AA","QF","QR","AY","IB","MH","RJ","UL","AS","AT","FJ"],
+  ST:["KE","DL","AF","KL","GA","VN","CI","MU","SU","AZ","AM","SV","ME","UX","RO","OK","MF","VS","KQ","AR"]
+};
+const AIRLINE_NAME = {NH:"ANA",JL:"JAL",OZ:"アシアナ",UA:"ユナイテッド",SQ:"シンガポール航空",TG:"タイ国際航空",LH:"ルフトハンザ",LX:"スイス",OS:"オーストリア航空",TK:"ターキッシュ",AC:"エア・カナダ",NZ:"ニュージーランド航空",BR:"エバー航空",CA:"中国国際航空",CX:"キャセイ",BA:"ブリティッシュ",AA:"アメリカン",QF:"カンタス",QR:"カタール航空",KE:"大韓航空",DL:"デルタ",AF:"エールフランス",KL:"KLM",EK:"エミレーツ",EY:"エティハド",HX:"香港航空",UO:"香港エクスプレス",MM:"ピーチ",GK:"ジェットスターJ",BC:"スカイマーク","7G":"スターフライヤー",JW:"バニラ",VN:"ベトナム航空",CI:"チャイナエアライン",MH:"マレーシア航空",GA:"ガルーダ",PR:"フィリピン航空",TR:"スクート",D7:"エアアジアX",HA:"ハワイアン"};
+const WD = ["日","月","火","水","木","金","土"];
+
+/* ---------- 日付ユーティリティ ---------- */
+const DAY = 86400000;
+function pd(s){ if(typeof s!=="string"||!/^\d{4}-\d{2}-\d{2}/.test(s)) return NaN; const [y,m,d]=s.split("-").map(Number); return Date.UTC(y,m-1,d); }
+function fd(ms){ const d=new Date(ms); return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0"); }
+function addDays(s,n){ return fd(pd(s)+n*DAY); }
+function diffDays(a,b){ return Math.round((pd(b)-pd(a))/DAY); }
+function wd(s){ return WD[new Date(pd(s)).getUTCDay()]; }
+function jd(s){ if(!s||isNaN(pd(s))) return "?"; const [y,m,d]=s.split("-"); return `${+m}/${+d}(${wd(s)})`; }
+function jdy(s){ if(!s||isNaN(pd(s))) return "?"; const [y,m,d]=s.split("-"); return `${y}/${+m}/${+d}(${wd(s)})`; }
+function tzOffsetMin(tz, utcMs){
+  const dtf = new Intl.DateTimeFormat("en-US",{timeZone:tz,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+  const p = Object.fromEntries(dtf.formatToParts(new Date(utcMs)).map(x=>[x.type,x.value]));
+  return (Date.UTC(+p.year,+p.month-1,+p.day,+p.hour==24?0:+p.hour,+p.minute)-utcMs)/60000;
+}
+function zonedToUTC(dateStr,timeStr,tz){
+  const [y,m,d]=dateStr.split("-").map(Number); const [hh,mm]=timeStr.split(":").map(Number);
+  const local = Date.UTC(y,m-1,d,hh,mm); let guess = local;
+  for(let i=0;i<2;i++){ guess = local - tzOffsetMin(tz,guess)*60000; }
+  return guess;
+}
+function mins(t){ if(typeof t!=="string"||!/^\d{1,2}:\d{2}/.test(t)) return 0; const [h,m]=t.split(":").map(Number); return h*60+m; }
+function hm(minutes){ const h=Math.floor(minutes/60), m=minutes%60; return h+"時間"+(m?m+"分":""); }
+function ap(code){ return AIRPORTS[(code||"").toUpperCase()]; }
+function apName(code){ const a=ap(code); return a? a[1] : code; }
+function countryOf(code){ const a=ap(code); if(!a) return null; return SCHENGEN.has(a[2])?"SCHENGEN":a[2]; }
+function allianceOf(al){ for(const k in ALLIANCE){ if(ALLIANCE[k].includes(al)) return k; } return null; }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function safe(s){ return esc(s).replace(/&lt;b&gt;/g,"<b>").replace(/&lt;\/b&gt;/g,"</b>"); }
+function attr(s){ return esc(s); }
+
+/* ---------- データ ---------- */
+const KEY = "itinerary-checker-v1";
+let DB = load();
+function defaultDB(){
+  return {active:null,trips:[hkTrip()]};
+}
+function hkTrip(){
+  // 初期表示用の見本（架空の予約番号）。本物の予約はメール取り込み(PRELOAD)や自分の入力で入る
+  const t = {id:uid(),name:"【見本】香港 2泊（架空）",pax:2,passport:"",alliance:"SA",items:[]};
+  t.items = [
+    {id:uid(),type:"flight",airline:"NH",number:"859",from:"HND",to:"HKG",depDate:"2026-11-20",depTime:"09:35",arrDate:"2026-11-20",arrTime:"13:30",pnr:"SAMPLE",pax:2,note:"見本データ。編集・削除して使ってください"},
+    {id:uid(),type:"hotel",kind:"hotel",name:"見本ホテル 香港",airport:"HKG",checkin:"2026-11-20",checkout:"2026-11-22",conf:"00000000",guests:2,note:"見本データ"},
+    {id:uid(),type:"flight",airline:"NH",number:"860",from:"HKG",to:"HND",depDate:"2026-11-22",depTime:"15:05",arrDate:"2026-11-22",arrTime:"20:20",pnr:"SAMPLE",pax:2,note:"見本データ"}
+  ];
+  return t;
+}
+function demoTrip(){
+  const t = {id:uid(),name:"【練習】ミスあり：ロサンゼルス 2026-11",pax:2,passport:"2027-03-15",alliance:"SA",items:[]};
+  t.items = [
+    {id:uid(),type:"flight",airline:"NH",number:"106",from:"HND",to:"LAX",depDate:"2026-11-10",depTime:"17:05",arrDate:"2026-11-10",arrTime:"10:00",pnr:"ABC123",pax:2,note:"日付変更線を越えるので、出発と同じ日の朝に着く（これは正しい）"},
+    {id:uid(),type:"hotel",kind:"hotel",name:"JWマリオット LA LIVE",airport:"LAX",checkin:"2026-11-11",checkout:"2026-11-14",conf:"",guests:1,note:"チェックインを到着の翌日にしてしまった例（人数も1名・予約番号なし）"},
+    {id:uid(),type:"hotel",kind:"rental",name:"Airbnb サンタモニカ",airport:"LAX",checkin:"2026-11-13",checkout:"2026-11-15",conf:"HMX9K2",guests:2,note:"前のホテルと11/13の夜がダブっている例"},
+    {id:uid(),type:"flight",airline:"JL",number:"62",from:"LAX",to:"HND",depDate:"2026-11-15",depTime:"00:50",arrDate:"2026-11-15",arrTime:"05:00",pnr:"XYZ789",pax:2,note:"本当は11/16着。到着日の+1日を忘れた例。JALなのでスターアライアンスでもない"},
+    {id:uid(),type:"flight",airline:"NH",number:"3871",from:"NRT",to:"KKJ",depDate:"2026-11-16",depTime:"07:40",arrDate:"2026-11-16",arrTime:"09:30",pnr:"",pax:2,note:"羽田に着くのに成田から乗る例（別空港乗り継ぎ）"}
+  ];
+  return t;
+}
+function sanitizeDB(d){
+  if(!d||!Array.isArray(d.trips)) return null;
+  const D8=/^\d{4}-\d{2}-\d{2}$/, TM=/^\d{2}:\d{2}(:\d{2})?$/, ID=/^[\w-]{1,24}$/;
+  const S=v=>String(v??"").slice(0,200);
+  const trips=d.trips.filter(t=>t&&typeof t==="object").map(t=>({
+    id:ID.test(S(t.id))?S(t.id):uid(), name:S(t.name)||"無題の旅程", pax:+t.pax>0?+t.pax:2, passport:D8.test(S(t.passport))?S(t.passport):"", alliance:t.alliance==="SA"?"SA":"",
+    items:(Array.isArray(t.items)?t.items:[]).filter(i=>i&&typeof i==="object").map(i=>{
+      const id=ID.test(S(i.id))?S(i.id):uid();
+      if(i.type==="flight"){ if(!(D8.test(S(i.depDate))&&D8.test(S(i.arrDate))&&TM.test(S(i.depTime))&&TM.test(S(i.arrTime))&&S(i.from)&&S(i.to))) return null;
+        return {id,type:"flight",airline:S(i.airline).toUpperCase(),number:S(i.number),from:S(i.from).toUpperCase(),to:S(i.to).toUpperCase(),depDate:S(i.depDate),depTime:S(i.depTime).slice(0,5),arrDate:S(i.arrDate),arrTime:S(i.arrTime).slice(0,5),pnr:S(i.pnr).toUpperCase(),pax:+i.pax>0?+i.pax:undefined,note:S(i.note)}; }
+      if(i.type==="hotel"){ if(!(D8.test(S(i.checkin))&&D8.test(S(i.checkout))&&S(i.name))) return null;
+        return {id,type:"hotel",kind:["hotel","rental","home"].includes(i.kind)?i.kind:"hotel",name:S(i.name),airport:S(i.airport).toUpperCase(),checkin:S(i.checkin),checkout:S(i.checkout),conf:S(i.conf),guests:+i.guests>0?+i.guests:undefined,note:S(i.note)}; }
+      return null; }).filter(Boolean)}));
+  if(!trips.length) return null;
+  const here=S(d.here).toUpperCase(); return {active:trips.some(t=>t.id===d.active)?d.active:trips[0].id,trips,here:/^[A-Z]{3}$/.test(here)?here:""};
+}
+function load(){
+  // 優先順位：①メール取り込み(PRELOAD)の方が新しければそれ ②このブラウザに保存した分 ③初期データ
+  let stored=null; try{ const raw=localStorage.getItem(KEY); if(raw) stored=JSON.parse(raw); }catch(e){}
+  const pre = (typeof PRELOAD==="object" && PRELOAD && Array.isArray(PRELOAD.trips)) ? PRELOAD : null;
+  if(pre && (!stored || !stored.stamp || (pre.stamp && pre.stamp>stored.stamp))){ const d=sanitizeDB(pre); if(d){ d.stamp=pre.stamp; return d; } }
+  if(stored){ const d=sanitizeDB(stored); if(d){ d.stamp=stored.stamp; return d; } }
+  return defaultDB();
+}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(DB)); }catch(e){} }
+function trip(){ if(!DB.trips.length){ DB=defaultDB(); } let t=DB.trips.find(x=>x.id===DB.active); if(!t){ t=DB.trips[0]; DB.active=t.id; } return t; }
+
+/* ---------- 検査エンジン ---------- */
+const ETA = {US:"ESTA（アメリカ）",CA:"eTA（カナダ）",AU:"ETA（オーストラリア）",NZ:"NZeTA（ニュージーランド）",GB:"ETA（イギリス）",SCHENGEN:"ETIAS（ヨーロッパ・2026年開始予定）"};
+function cityKey(code){ const a=ap(code); return a? a[1].split("(")[0] : null; }
+function sameCity(c1,c2){ const k1=cityKey(c1),k2=cityKey(c2); return !!(k1&&k2&&k1===k2); }
+function daysFromToday(dateStr){ const n=new Date(); return Math.round((pd(dateStr)-Date.UTC(n.getFullYear(),n.getMonth(),n.getDate()))/DAY); }
+function nearest(list, keyFn, target, maxDiff){
+  let best=null, bd=Infinity;
+  for(const x of list){ const d=Math.abs(diffDays(target,keyFn(x))); if(d<=maxDiff && d<bd){ bd=d; best=x; } }
+  return best;
+}
+
+function analyze(t){
+  const F = [];
+  const add = (sev,title,why,fix,ids=[])=>F.push({sev,title,why,fix,ids});
+  // 元データを汚さないためコピーで計算
+  const flights = t.items.filter(i=>i.type==="flight").map(f=>({...f}));
+  const hotels  = t.items.filter(i=>i.type==="hotel").map(h=>({...h}));
+  for(const f of flights){
+    const a=ap(f.from), b=ap(f.to);
+    f._depUTC = a? zonedToUTC(f.depDate,f.depTime,a[0]) : null;
+    f._arrUTC = b? zonedToUTC(f.arrDate,f.arrTime,b[0]) : null;
+    f._sort = f._depUTC ?? (pd(f.depDate)+mins(f.depTime)*60000);
+  }
+  flights.sort((x,y)=>x._sort-y._sort);
+  hotels.sort((x,y)=>pd(x.checkin)-pd(y.checkin));
+  const explained = new Set(); // 個別の指摘で理由を説明した夜（日付）。汎用の「予約なし」を重ねて出さない
+  const explainedHotel = new Set(); // チェックアウト日ズレで説明済みのホテル。「ムダ泊」を重ねて出さない
+  const flabel = f=>`${f.airline}${f.number} ${apName(f.from)}→${apName(f.to)} ${jd(f.depDate)}`;
+
+  /* --- 個別：ホテル --- */
+  for(const h of hotels){
+    const n = diffDays(h.checkin,h.checkout);
+    if(n<=0) add("crit",`${h.name}：チェックアウトがチェックインと同じか前になっている`,`${jd(h.checkin)}イン→${jd(h.checkout)}アウトでは泊数が${n}泊になります。`,`チェックアウト日を1日以上あとにする。`,[h.id]);
+    if(!ap(h.airport)) add("info",`${h.name}：最寄り空港「${h.airport||"未入力"}」が分からない`,`国と時差の判定ができないため、この滞在先は「到着日とのズレ」「場所ちがい」チェックの対象外です。`,`3文字の空港コード（HKG、HND など）を入れる。`,[h.id]);
+    if(!h.conf && h.kind!=="home"){ const soon = daysFromToday(h.checkin)<=30; add(soon?"warn":"info",`${h.name}：予約番号が空欄${soon?"（チェックインまで30日以内）":""}`,`予約番号がない＝まだ予約が確定していない可能性があります。`,`予約確認メールの番号を入れる。まだなら<b>予約する</b>。`,[h.id]); }
+    if(h.guests && t.pax && +h.guests!==+t.pax) add("info",`${h.name}：人数が${h.guests}名（旅程の基準は${t.pax}名）`,`わざと1名で取る使い方（同伴者無料）もありますが、欧米は大人2名の登録が必須のことが多く、朝食・ラウンジの人数にも影響します。`,`意図的ならOK。ちがえば予約サイトで人数を${t.pax}名に直す。`,[h.id]);
+  }
+  /* --- 個別：便 --- */
+  for(const f of flights){
+    const a=ap(f.from), b=ap(f.to); const label=flabel(f);
+    if(!a||!b) add("info",`${label}：空港コードが分からない（${!a?f.from:""}${!a&&!b?"・":""}${!b?f.to:""}）`,`時差の計算ができないため、この便は「到着が出発より前」チェックの対象外です。`,`3文字の空港コードを入れる。`,[f.id]);
+    if(f._depUTC!=null && f._arrUTC!=null){
+      const dur=(f._arrUTC-f._depUTC)/60000;
+      if(dur<=0) add("crit",`${label}：到着が出発より前になっている`,`時差を計算すると、到着（${jd(f.arrDate)} ${f.arrTime}）が出発（${jd(f.depDate)} ${f.depTime}）より${hm(-dur)}前です。夜行便の「到着日＋1日」を忘れたか、日付変更線を越える便で到着日を間違えた可能性が高いです。`,`eチケットの到着日を見て直す。<b>到着日は現地の日付</b>です。`,[f.id]);
+      else if(dur>20*60) add("warn",`${label}：飛行時間が${hm(dur)}になっている`,`直行便で20時間を超えることはほぼありません。到着日か出発日が1日ズレている可能性があります（到着日を1日戻すと${hm(dur-1440)}になります）。`,`eチケットと見比べる。特に<b>日付変更線を越える便（アメリカ⇄日本）</b>は到着日に注意。経由便を1本で入れた場合はこの警告は無視してOK。`,[f.id]);
+      else if(dur<30) add("warn",`${label}：飛行時間が${hm(dur)}しかない`,`短すぎます。時刻の入力ミス（例：13:35を1:35）かもしれません。`,`24時間表記で見直す。`,[f.id]);
+    }
+    if(mins(f.depTime)<6*60) add("info",`${label} ${f.depTime}発：深夜・早朝便`,`日付の上では${jd(f.depDate)}ですが、空港へ行くのは<b>前日 ${jd(addDays(f.depDate,-1))} の夜</b>です。この夜のホテルは要りません（または数時間しか使いません）。`,`カレンダーには「${jd(addDays(f.depDate,-1))} 夜 空港へ」と書く。`,[f.id]);
+    if(!f.pnr){ const soon = daysFromToday(f.depDate)<=30; add(soon?"warn":"info",`${label}：予約番号が空欄${soon?"（出発まで30日以内）":""}`,`航空券がまだ買えていない可能性があります。予約番号（英数字6文字）は購入完了メールにあります。`,`未購入なら<b>購入</b>。購入済みなら番号を入れる。`,[f.id]); }
+    if(f.pax && t.pax && +f.pax!==+t.pax) add("warn",`${label}：人数が${f.pax}名（旅程の基準は${t.pax}名）`,`同行者の分が取れていないかもしれません。`,`予約を確認し、足りない分を追加する。`,[f.id]);
+    if(t.alliance==="SA" && a && b && a[2]!==b[2]){
+      const al = allianceOf(f.airline);
+      if(al!=="SA") add("warn",`${label}：スターアライアンス以外（${AIRLINE_NAME[f.airline]||f.airline}）`,`国際線はスターアライアンス便が条件です。マイル・ラウンジ・優先搭乗の特典が付きません。`,`ANA・シンガポール航空・ユナイテッド・タイ国際・エバー航空などに替えられるか確認する。`,[f.id]);
+    }
+  }
+  /* --- 乗り継ぎ・区間の連続 --- */
+  for(let i=0;i<flights.length-1;i++){
+    const p=flights[i], n=flights[i+1];
+    if(p._arrUTC==null||n._depUTC==null) continue;
+    const gap=(n._depUTC-p._arrUTC)/60000;
+    if(gap<0){ add("crit",`${p.airline}${p.number}→${n.airline}${n.number}：次の便が前の便の到着より前に出発`,`順番か日付が間違っています。`,`両方の日付・時刻を見直す。`,[p.id,n.id]); continue; }
+    if(p.to!==n.from){
+      if(sameCity(p.to,n.from)){
+        if(gap<24*60) add("crit",`${apName(p.to)}に着いて${apName(n.from)}から出発（同じ街の別の空港）`,`空港が違います。移動に1〜2時間かかり、間は${hm(gap)}しかありません。`,`便を同じ空港に揃えるか、移動時間を含めて余裕があるか確認する。`,[p.id,n.id]);
+        else add("info",`${apName(p.to)}に着いて、次は${apName(n.from)}から出発`,`同じ街ですが空港が違います。当日の移動先を間違えやすいところです。`,`カレンダーに出発空港名を大きく書く。`,[p.id,n.id]);
+      }else{
+        add(gap<24*60?"crit":"warn",`${apName(p.to)}に着いたあと、${apName(n.from)}から出発（間の移動が入っていない）`,`${jd(p.arrDate)} に${apName(p.to)}へ着き、${jd(n.depDate)} に${apName(n.from)}から出ます。この間の移動（飛行機・電車・車）が旅程にありません。${gap<24*60?"間は"+hm(gap)+"しかなく、移動できません。":""}`,`間の便を入れる。電車・車なら「メモ」に書いておく（この警告は残ります）。`,[p.id,n.id]);
+      }
+      continue;
+    }
+    const intl = ap(p.from)&&ap(n.to)&&(ap(p.from)[2]!==ap(p.to)[2] || ap(n.from)[2]!==ap(n.to)[2]);
+    const samePNR = p.pnr && n.pnr && p.pnr===n.pnr;
+    if(samePNR){
+      const mct = intl?60:35;
+      if(gap<mct) add("warn",`${apName(p.to)}での乗り継ぎが${hm(gap)}（同じ予約）`,`航空会社が売っている接続でも、遅れると走ることになります。1枚の航空券なので、乗れなければ振り替えてもらえます。`,`手荷物のみにする。座席は前方を選ぶ。`,[p.id,n.id]);
+    }else{
+      const mctC = intl?90:45, mctW = intl?180:120;
+      if(gap<mctC) add("crit",`${apName(p.to)}での乗り継ぎが${hm(gap)}（別々の予約）`,`予約番号が別（または未入力）＝別々の航空券です。前の便が遅れて乗れないと、<b>買い直しも宿も全額自分持ち</b>です。${intl?"国際線がからむと荷物の受け取り・出入国・再チェックインで90分は必要。":"国内線でも45分は必要。"}`,`前の便を早める、または次の便を遅らせる。同じ予約番号で買える経路があればそちらに。`,[p.id,n.id]);
+      else if(gap<mctW) add("warn",`${apName(p.to)}での乗り継ぎが${hm(gap)}（別々の予約・ぎりぎり）`,`別々の航空券なので、前の便が1時間遅れると危ないです。ターミナルの移動（羽田T1→T2など）があると特に。`,`1本早い便を検討。手荷物のみにする。`,[p.id,n.id]);
+    }
+    if(gap>=8*60 && gap<20*60 && !hotels.some(h=>h.airport&&sameCity(h.airport,p.to)&&pd(h.checkin)<=pd(n.depDate)&&pd(h.checkout)>=pd(p.arrDate))) add("info",`${apName(p.to)}で${hm(gap)}の待ち時間`,`かなり長い待ち時間です。ラウンジ・仮眠・空港近くのホテルを使うか決めておくと楽です。`,`ラウンジの営業時間を確認（羽田の国際線ラウンジは深夜に閉まる時間帯あり）。`,[p.id,n.id]);
+  }
+
+  /* --- 到着日とチェックイン日 --- */
+  for(const f of flights){
+    if(!ap(f.to)) continue;
+    const A=f.arrDate;
+    const cands = hotels.filter(h=>h.airport && sameCity(h.airport,f.to));
+    const h = nearest(cands, x=>x.checkin, A, 3);
+    if(!h) continue;
+    const d = diffDays(A,h.checkin); // 正＝到着より後にチェックイン
+    if(d>0){
+      for(let k=0;k<d;k++) explained.add(addDays(A,k));
+      add("crit",`${h.name}：チェックインが到着の${d}日後（${jd(h.checkin)}）になっています`,`${f.airline}${f.number}は ${jd(A)} ${f.arrTime} に${apName(f.to)}へ着きます。到着した夜${d>1?"から"+d+"夜":""}、部屋がありません。`,`チェックイン日を <b>${jd(A)}</b> に直す。`,[h.id,f.id]);
+    }else if(d<0){
+      if(d===-1 && mins(f.arrTime)<12*60) add("info",`${h.name}：到着前日（${jd(h.checkin)}）からの予約`,`朝 ${f.arrTime} に着いてすぐ部屋に入るために前日から取る、という使い方なら正しいです。そのつもりでなければ1泊ムダになります。`,`意図的ならOK。ちがうならチェックインを ${jd(A)} に直す。`,[h.id,f.id]);
+      else add("warn",`${h.name}：チェックインが到着の${-d}日前（${jd(h.checkin)}）`,`${f.airline}${f.number}は ${jd(A)} ${f.arrTime} 着。先の${-d}泊は使えません。`,`チェックインを <b>${jd(A)}</b> に直す（前から取る理由がなければ）。`,[h.id,f.id]);
+    }else{
+      const m=mins(f.arrTime);
+      if(m<8*60) add("warn",`${h.name}：${jd(A)} ${f.arrTime} 着（早朝）で、チェックインは当日`,`部屋に入れるのは通常15時。<b>約${Math.round((15*60-m)/60)}時間</b>待つことになります。着いてすぐ寝たいなら、前日 ${jd(addDays(A,-1))} からの予約が必要です。`,`①<b>アーリーチェックイン</b>を依頼（会員ステータスがあれば通りやすい） ②無理なら前日から予約 ③荷物を預けてラウンジ・観光で15時まで過ごす。`,[h.id,f.id]);
+      else if(m<12*60) add("info",`${h.name}：${jd(A)} ${f.arrTime} 着（午前）→チェックインは通常15時`,`部屋に入れるのは午後です。`,`<b>アーリーチェックイン</b>を依頼するか、荷物預け＋ラウンジ。`,[h.id,f.id]);
+    }
+  }
+  /* --- 出発日とチェックアウト日 --- */
+  for(const f of flights){
+    if(!ap(f.from)) continue;
+    const D=f.depDate, early=mins(f.depTime)<6*60;
+    const cands = hotels.filter(h=>h.airport && sameCity(h.airport,f.from));
+    const h = nearest(cands, x=>x.checkout, D, 3);
+    if(!h) continue;
+    const d = diffDays(D,h.checkout); // 正＝出発より後にチェックアウト
+    if(d>0){
+      explainedHotel.add(h.id);
+      const nights=diffDays(h.checkin,h.checkout);
+      add("warn",`${h.name}：チェックアウトが出発の${d}日後（${jd(h.checkout)}）`,`${f.airline}${f.number}は ${jd(D)} ${f.depTime} 発。最後の${d}泊は使えません。帰りの便の日付を間違えている可能性もあります。`,nights<=d?`この予約は1泊も使えません。<b>キャンセル</b>するか、便の日付を確認する。`:`チェックアウトを <b>${jd(D)}</b> に直すか、便の日付を確認する。`,[h.id,f.id]);
+    }else if(d<0){
+      for(let k=0;k<-d;k++) explained.add(addDays(h.checkout,k));
+      add("crit",`${h.name}：チェックアウトが出発の${-d}日前（${jd(h.checkout)}）`,`${f.airline}${f.number}は ${jd(D)} ${f.depTime} 発。${jd(h.checkout)} から出発までの${-d}夜、寝る場所がありません。`,`チェックアウトを <b>${jd(D)}</b> に延ばす。`,[h.id,f.id]);
+    }else{
+      if(early){
+        const nb=addDays(D,-1);
+        if(pd(h.checkin)<=pd(nb)) add("info",`${h.name}：${jd(nb)} の夜は数時間しか使いません`,`${f.airline}${f.number}は ${jd(D)} ${f.depTime} 発なので、ホテルを出るのは ${jd(nb)} の夜です。1泊分払って数時間の利用になります。`,`休んでから空港へ行きたいなら今のまま。節約したいなら <b>${jd(nb)} アウト＋レイトチェックアウト</b>に変更。`,[h.id,f.id]);
+      }else if(mins(f.depTime)>=18*60) add("info",`${h.name}：${jd(D)} アウト、出発は ${f.depTime}`,`チェックアウト（通常11〜12時）から出発まで長い時間があります。`,`<b>レイトチェックアウト</b>または荷物預けを頼む。空港へは出発の3時間前に。`,[h.id,f.id]);
+    }
+  }
+
+  /* --- 夜の地図（その夜どこにいるかを便から計算し、ホテルの場所と照合） --- */
+  const dates=[]; for(const f of flights) dates.push(pd(f.depDate),pd(f.arrDate)); for(const h of hotels) dates.push(pd(h.checkin),pd(h.checkout));
+  const nights=[]; const misplaced={}; // hotelId -> {hotel, nights:[], loc}
+  if(dates.length){
+    const start=Math.min(...dates), end=Math.max(...dates);
+    for(let d=start; d<end; d+=DAY){
+      const ds=fd(d), next=fd(d+DAY);
+      let loc=null; for(const f of flights){ if(pd(f.arrDate)<=d) loc=f.to; }
+      if(!loc && flights.length) loc=flights[0].from;
+      const inAir = flights.filter(f=>pd(f.depDate)<=d && d<pd(f.arrDate));
+      const airport = flights.filter(f=>f.depDate===next && mins(f.depTime)<6*60);
+      const hs = hotels.filter(h=>pd(h.checkin)<=d && d<pd(h.checkout));
+      const here = hs.filter(h=>!loc || !ap(h.airport) || sameCity(h.airport,loc));
+      const away = hs.filter(h=>!here.includes(h));
+      let state,label,detail;
+      if(inAir.length){
+        if(hs.length){ state="wasted"; label="ムダ泊？"; detail=`${hs[0].name}（この夜は${inAir[0].airline}${inAir[0].number}の機内）`; }
+        else { state="air"; label="機内泊"; detail=`${inAir[0].airline}${inAir[0].number} ${apName(inAir[0].from)}→${apName(inAir[0].to)}`; }
+      }else if(here.length>=2){ state="double"; label="二重予約"; detail=here.map(h=>h.name).join(" / "); }
+      else if(here.length===1){ state="hotel"; label=airport.length?"ホテル（深夜発）":(here[0].kind==="home"?"滞在先":here[0].kind==="rental"?"民泊":"ホテル"); detail=here[0].name+(airport.length?` → ${airport[0].depTime}発 ${airport[0].airline}${airport[0].number}`:""); }
+      else if(airport.length){ state="airport"; label="空港泊・夜行便前"; detail=`${airport[0].depTime}発 ${airport[0].airline}${airport[0].number}`; }
+      else { state="gap"; label="予約なし"; detail=(loc?`${apName(loc)}にいるのに`:"")+"寝る場所がありません"+(away.length?`（${away[0].name}は別の街）`:""); }
+      if(!inAir.length) for(const h of away){ (misplaced[h.id]=misplaced[h.id]||{hotel:h,nights:[],loc}).nights.push(ds); }
+      nights.push({date:ds,state,label,detail,ids:[...hs.map(h=>h.id),...inAir.map(f=>f.id),...airport.map(f=>f.id)]});
+    }
+  }
+  for(const id in misplaced){
+    const m=misplaced[id], n=m.nights.length;
+    add("warn",`${m.hotel.name}（${apName(m.hotel.airport)}）：${jd(m.nights[0])}${n>1?"〜"+jd(m.nights[n-1]):""} の${n}夜、あなたは${apName(m.loc)}にいる計算です`,`便の到着地とホテルの街が合いません。ホテルの日付か、便の入れ忘れのどちらかです。`,`①この${n}泊が不要ならホテルを短くする ②${apName(m.loc)}→${apName(m.hotel.airport)}の便を入れ忘れていないか確認する。`,[m.hotel.id]);
+  }
+  for(let gi=0; gi<nights.length; gi++){
+    const n=nights[gi]; if(n.state!=="gap") continue;
+    let gj=gi; while(gj+1<nights.length && nights[gj+1].state==="gap") gj++;
+    const first=n.date, last=nights[gj].date, count=gj-gi+1;
+    let allExplained=true; for(let k=gi;k<=gj;k++) if(!explained.has(nights[k].date)) allExplained=false;
+    if(allExplained){ gi=gj; continue; }
+    const before = hotels.find(h=>h.checkout===first);
+    const after  = hotels.find(h=>h.checkin===addDays(last,1));
+    let loc=null; for(const f of flights){ if(pd(f.arrDate)<=pd(first)) loc=f.to; } if(!loc && flights.length) loc=flights[0].from;
+    const inJapan = loc && countryOf(loc)==="JP";
+    let fix = count===1? "この夜のホテルを予約する。" : `${jd(first)}〜${jd(last)} の宿を予約する。`;
+    if(count===1 && after) fix = `<b>${after.name}</b>のチェックインを1日早めて ${jd(first)} にすると埋まります（到着日とチェックイン日のズレの典型）。`;
+    else if(count===1 && before) fix = `<b>${before.name}</b>を1泊のばして ${jd(addDays(first,1))} チェックアウトにすると埋まります。`;
+    if(inJapan) fix += ` 自宅や実家にいる期間なら、「ホテル・滞在先を追加」で種類「自宅・知人宅」として登録すると、この警告は消えます。`;
+    const ids=[]; for(let k=gi;k<=gj;k++) ids.push(...nights[k].ids);
+    add(inJapan?"warn":"crit", count===1? `${jd(first)} の夜：寝る場所の予約がありません` : `${jd(first)}〜${jd(last)} の${count}夜：寝る場所の予約がありません`,
+      `${loc?`この期間は${apName(loc)}にいる計算です。`:""}ホテルも夜行便もこの夜にかかっていません。`, fix, [...ids,...(after?[after.id]:[]),...(before?[before.id]:[])]);
+    gi=gj;
+  }
+  for(const n of nights){
+    if(n.state==="double") add("warn",`${jd(n.date)} の夜：ホテルが2つ重なっています`,`${n.detail}。片方はムダ払いか、日付の入れ間違いです。`,`どちらかのチェックイン／アウト日をずらすか、片方をキャンセルする（キャンセル料の締切に注意）。`,n.ids);
+    if(n.state==="wasted"){
+      const h=hotels.find(x=>n.ids.includes(x.id)); if(h && explainedHotel.has(h.id)) continue; const one = h && diffDays(h.checkin,h.checkout)<=1;
+      add("warn",`${jd(n.date)} の夜：機内にいるのにホテルを取っています`,`${n.detail}。この夜はホテルに寝ません。`,one?`夜行便の前に部屋で休む「デイユース」のつもりならそのままでOK。ちがえば<b>この予約をキャンセル</b>する（1泊だけの予約なので短くはできません）。`:`夜行便の前に部屋で休む「デイユース」のつもりならそのままでOK。ちがえばホテルのチェックアウトを ${jd(n.date)} に直す。`,n.ids);
+    }
+  }
+
+  /* --- パスポート（各国への入国日＋6か月。帰国日は使わない） --- */
+  const lastDate = dates.length? fd(Math.max(...dates)) : null;
+  const entries = flights.filter(f=>ap(f.from)&&ap(f.to)&&ap(f.from)[2]!==ap(f.to)[2]&&ap(f.to)[2]!=="JP");
+  if(entries.length){
+    if(!t.passport) add("info","パスポートの有効期限が未入力","多くの国は「入国の時点で残り6か月」が必要です。","右の設定に有効期限を入れると、入国日ごとに自動でチェックします。");
+    else{
+      const worst = entries.map(f=>({f,left:diffDays(f.arrDate,t.passport)})).sort((a,b)=>a.left-b.left)[0];
+      if(worst.left<0) add("crit",`パスポートが旅程中に切れます（${jdy(t.passport)}）`,`${jd(worst.f.arrDate)} ${apName(worst.f.to)} 入国の時点で期限切れです。`,"更新する。",[worst.f.id]);
+      else if(worst.left<183) add("crit",`パスポートの残りが ${jd(worst.f.arrDate)} ${apName(worst.f.to)} 入国時点で${worst.left}日（6か月未満）`,`${jdy(t.passport)} 期限。残り6か月未満だと入国を拒否される国があります（タイ・シンガポール・マレーシア・UAE・中国など）。`,"出発前に更新する。",[worst.f.id]);
+    }
+  }
+  /* --- 出国便の有無・電子渡航認証 --- */
+  const etaDone=new Set();
+  for(let i=0;i<flights.length;i++){
+    const f=flights[i]; const c=countryOf(f.to); if(!c||c==="JP"||countryOf(f.from)===c) continue;
+    const out = flights.slice(i+1).find(g=>countryOf(g.from)===c && countryOf(g.to)!==c);
+    if(!out) add("warn",`${COUNTRY[c]||c}から出る便が入っていません（${f.airline}${f.number} ${jd(f.arrDate)} 着）`,`片道で入国すると、チェックイン時に「出国の航空券」を見せるよう求められ、無いと乗せてもらえないことがあります（タイ・フィリピン・インドネシア・アメリカなどで実例）。ビザ免除の日数も「出国日」が決まらないと計算できません。`,`次の国へ行く便を先に押さえて、この旅程に入れる。まだ決めていないなら、変更できる運賃で仮に取る。`,[f.id]);
+    if(ETA[c] && !etaDone.has(c)){ etaDone.add(c); add("info",`${COUNTRY[c]||c}：${ETA[c]} の事前申請が必要`,`ビザは不要でも、ネットでの事前登録がないとチェックインで乗せてもらえません（2026年9月時点の一般情報・要確認）。`,`申請済みか、有効期限が ${jd(f.arrDate)} をカバーしているか確認。`,[f.id]); }
+  }
+
+  /* --- 滞在日数（保存済みの全旅程から） --- */
+  const stays = stayDays(DB.trips);
+  const year = lastDate? lastDate.slice(0,4) : String(new Date().getFullYear());
+  for(const c in stays){
+    const y = stays[c][year]||0;
+    if(c==="JP"){ if(y>=150) add("warn",`${year}年の日本滞在が${y}日（保存済みの旅程から計算）`,"183日を超えると税金の上で「日本に住んでいる人」と見られやすくなります。","税理士と方針を確認。このツールの日数は旅程に入れた分だけです。"); continue; }
+    const lim = STAY_LIMIT[c]; if(!lim) continue;
+    if(c==="SCHENGEN"){
+      if(stays[c]._rolling>90) add("crit",`シェンゲン圏：どこかの180日間で${stays[c]._rolling}日滞在（上限90日）`,"ヨーロッパの主要国は「さかのぼって180日のうち合計90日まで」です。国をまたいでも合計で数えます。超えると不法滞在になります。","ヨーロッパ以外で過ごす期間をはさむ。最終確認は各国大使館へ。");
+      else if(stays[c]._rolling>72) add("warn",`シェンゲン圏：180日間の合計が${stays[c]._rolling}日（上限90日の8割超え）`,"次にヨーロッパへ入る予定があると超えるおそれがあります。","ヨーロッパ滞在の予定を先に見直す。");
+      continue;
+    }
+    const maxRun = stays[c]._maxRun||0;
+    if(maxRun>lim) add("crit",`${COUNTRY[c]||c}に連続${maxRun}日滞在（ビザ免除の目安${lim}日を超過）`,"ビザなしで居られる日数を超えています。","ビザを取るか、いったん出国する日を旅程に入れる。最終確認は外務省・入国管理へ。");
+    else if(maxRun>lim*0.8) add("warn",`${COUNTRY[c]||c}に連続${maxRun}日滞在（目安${lim}日の8割超え）`,"上限が近いです。予定が延びると超えます。","延長の可能性があるなら出国日を先に決めておく。");
+  }
+
+  const order={crit:0,warn:1,info:2,ok:3};
+  F.sort((a,b)=>order[a.sev]-order[b.sev]);
+  if(!F.length && nights.length) F.push({sev:"ok",title:"問題は見つかりませんでした",why:"すべての夜に寝る場所があり、日付のズレもありません。",fix:"出発72時間前にもう一度この画面を開いて、予約番号が全部入っているか確認。",ids:[]});
+  return {findings:F,nights,flights,hotels,stays};
+}
+/* 国別・年別の滞在日数と最長連続日数（全旅程の便を時間順に並べて計算。入国日・出国日は両方1日と数える） */
+function stayDays(trips){
+  const fl=[];
+  for(const t of trips) for(const i of t.items){ if(i.type==="flight" && ap(i.from)&&ap(i.to)) fl.push({...i,_s:zonedToUTC(i.depDate,i.depTime,ap(i.from)[0]),_trip:t.name}); }
+  fl.sort((a,b)=>a._s-b._s);
+  const out={};
+  for(let i=0;i<fl.length;i++){
+    const f=fl[i]; const c=countryOf(f.to); if(!c) continue;
+    if(countryOf(f.from)===c) continue; // 国内移動は入国ではない
+    const nxt = fl.slice(i+1).find(g=>countryOf(g.from)===c && countryOf(g.to)!==c && pd(g.depDate)>=pd(f.arrDate));
+    if(!nxt) continue; // 出国便がない＝滞在中。数えない
+    const days = diffDays(f.arrDate,nxt.depDate)+1;
+    out[c]=out[c]||{_maxRun:0,_runs:[]};
+    out[c]._runs.push({from:f.arrDate,to:nxt.depDate,days,trip:f._trip});
+    out[c]._maxRun=Math.max(out[c]._maxRun,days);
+    for(let d=pd(f.arrDate); d<=pd(nxt.depDate); d+=DAY){ const y=fd(d).slice(0,4); out[c][y]=(out[c][y]||0)+1; }
+  }
+  if(out.SCHENGEN){
+    const days=new Set();
+    for(const r of out.SCHENGEN._runs){ for(let d=pd(r.from); d<=pd(r.to); d+=DAY) days.add(d); }
+    const arr=[...days].sort((a,b)=>a-b); let best=0;
+    for(let i=0,j=0;i<arr.length;i++){ while(arr[i]-arr[j]>=180*DAY) j++; best=Math.max(best,i-j+1); }
+    out.SCHENGEN._rolling=best;
+  }
+  return out;
+}
+
+/* ---------- 描画 ---------- */
+const $=s=>document.querySelector(s);
+let editingId=null;
+function render(){
+  const t=trip(); save();
+  // trips select
+  const sel=$("#tripSel"); sel.innerHTML=DB.trips.map(x=>`<option value="${x.id}" ${x.id===t.id?"selected":""}>${esc(x.name)}</option>`).join("");
+  $("#setPax").value=t.pax||""; $("#setPassport").value=t.passport||""; $("#setAlliance").value=t.alliance||""; $("#setHere").value=DB.here||"";
+  const R=analyze(t);
+  // tiles
+  const c={crit:0,warn:0,info:0}; R.findings.forEach(f=>{ if(c[f.sev]!=null) c[f.sev]++; });
+  const gaps=R.nights.filter(n=>n.state==="gap").length;
+  $("#tiles").innerHTML=`
+    <div class="tile"><div class="k">泊数</div><div class="v">${R.nights.length}<small>泊</small></div></div>
+    <div class="tile ${gaps?"crit":"ok"}"><div class="k">寝る場所がない夜</div><div class="v">${gaps}<small>泊</small></div></div>
+    <div class="tile ${c.crit?"crit":"ok"}"><div class="k">今すぐ直す</div><div class="v">${c.crit}</div></div>
+    <div class="tile ${c.warn?"warn":"ok"}"><div class="k">確認する</div><div class="v">${c.warn}</div></div>
+    <div class="tile info"><div class="k">提案</div><div class="v">${c.info}</div></div>
+    ${nextTile(R)}`;
+  // nights
+  $("#nights").innerHTML = R.nights.length? R.nights.map(n=>{
+    const w=wd(n.date); const cls=w==="土"?"sat":w==="日"?"sun":"";
+    return `<div class="night ${n.state}" data-ids="${attr(n.ids.join(","))}" title="${esc(n.detail)}"><div class="d">${n.date.slice(5).replace("-","/")}<span class="wd ${cls}">${w}</span></div><div class="s">${esc(n.label)}</div><div class="n">${esc(n.detail)}</div></div>`;
+  }).join("") : `<div class="empty" style="flex:1">飛行機かホテルを1つ入れると、夜ごとの地図が出ます</div>`;
+  // items
+  const all=[...R.flights.map(f=>({...f,_d:f.depDate,_t:f.depTime})),...R.hotels.map(h=>({...h,_d:h.checkin,_t:"15:00"}))].sort((a,b)=>pd(a._d)-pd(b._d)||mins(a._t)-mins(b._t));
+  let html="", lastD=null;
+  for(const it of all){
+    if(it._d!==lastD){ html+=`<div class="daymark">${jdy(it._d)}</div>`; lastD=it._d; }
+    if(it.type==="flight"){
+      const al=allianceOf(it.airline);
+      html+=`<div class="item flight" data-id="${attr(it.id)}"><div class="stripe"></div><div class="body">
+        <div class="top"><span class="code">${esc(it.airline)}${esc(it.number)}</span><span class="name">${esc(apName(it.from))} → ${esc(apName(it.to))}</span>${AIRLINE_NAME[it.airline]?`<span class="tag">${AIRLINE_NAME[it.airline]}${al?" / "+({SA:"スタアラ",OW:"ワンワールド",ST:"スカイチーム"})[al]:""}</span>`:""}</div>
+        <div class="meta"><span><span class="mono">${jd(it.depDate)} ${it.depTime}</span> 発</span><span><span class="mono">${jd(it.arrDate)} ${it.arrTime}</span> 着${it.arrDate!==it.depDate?` <span class="tag">${diffDays(it.depDate,it.arrDate)>0?"+":""}${diffDays(it.depDate,it.arrDate)}日</span>`:""}</span><span>${it.pnr?`予約番号 <span class="mono">${esc(it.pnr)}</span>`:`<span class="tag miss">予約番号なし</span>`}</span><span>${it.pax}名</span></div>
+        ${it.note?`<div class="note">${esc(it.note)}</div>`:""}</div>
+        <div class="acts"><button class="btn small" data-edit="${attr(it.id)}">編集</button><button class="btn small danger" data-del="${attr(it.id)}">削除</button></div></div>`;
+    }else{
+      const n=diffDays(it.checkin,it.checkout);
+      html+=`<div class="item hotel" data-id="${attr(it.id)}"><div class="stripe"></div><div class="body">
+        <div class="top"><span class="name">${esc(it.name)}</span><span class="tag">${({hotel:"ホテル",rental:"民泊",home:"滞在先"})[it.kind]||"ホテル"} / ${esc(apName(it.airport))}</span></div>
+        <div class="meta"><span><span class="mono">${jd(it.checkin)}</span> イン → <span class="mono">${jd(it.checkout)}</span> アウト <span class="tag">${n}泊</span></span><span>${it.conf?`予約番号 <span class="mono">${esc(it.conf)}</span>`:`<span class="tag miss">予約番号なし</span>`}</span><span>${it.guests}名</span></div>
+        ${it.note?`<div class="note">${esc(it.note)}</div>`:""}</div>
+        <div class="acts"><button class="btn small" data-edit="${attr(it.id)}">編集</button><button class="btn small danger" data-del="${attr(it.id)}">削除</button></div></div>`;
+    }
+  }
+  $("#items").innerHTML = html || `<div class="empty">まだ何も入っていません。下のフォームから飛行機かホテルを追加してください。</div>`;
+  const first=all[0]?all[0]._d:null, last=R.nights.length?addDays(R.nights[R.nights.length-1].date,1):null;
+  $("#tripMeta").textContent = first? `${jdy(first)} 〜 ${jdy(last)}・${R.flights.length}便・${R.hotels.length}滞在` : "";
+  // findings
+  const SEV={crit:"今すぐ直す",warn:"確認",info:"提案",ok:"OK"};
+  $("#findings").innerHTML = R.findings.length? R.findings.map(f=>`<div class="f ${f.sev}" data-ids="${attr(f.ids.join(","))}"><div class="h"><span class="pill">${SEV[f.sev]}</span><span class="t">${safe(f.title)}</span></div><div class="why">${safe(f.why)}</div>${f.fix?`<div class="fix">直し方：${safe(f.fix)}</div>`:""}</div>`).join("") : `<div class="empty">旅程を入れると、ここに結果が出ます</div>`;
+  // stays
+  const years=new Set(); for(const c in R.stays) for(const k in R.stays[c]) if(/^\d{4}$/.test(k)) years.add(k);
+  const ys=[...years].sort();
+  if(ys.length){
+    $("#stays").innerHTML=`<table class="stayt"><thead><tr><th>国・地域</th>${ys.map(y=>`<th style="text-align:right">${y}年</th>`).join("")}<th style="text-align:right">最長連続（欧州は180日内合計）</th><th style="text-align:right">目安（2026年9月時点）</th></tr></thead><tbody>${Object.keys(R.stays).sort().map(c=>`<tr><td>${COUNTRY[c]||c}</td>${ys.map(y=>`<td class="mono">${R.stays[c][y]||"–"}</td>`).join("")}<td class="mono">${c==="SCHENGEN"?(R.stays[c]._rolling||0)+"日/180日":R.stays[c]._maxRun+"日"}</td><td class="mono">${c==="JP"?"183(税)":STAY_LIMIT[c]?STAY_LIMIT[c]+"日":"–"}</td></tr>`).join("")}</tbody></table>`;
+  } else $("#stays").innerHTML=`<div class="fine">往復の便（入国と出国）がそろうと、国ごとの日数が出ます。</div>`;
+}
+
+function fmtIn(ms,tz){ try{ return new Intl.DateTimeFormat("ja-JP",{timeZone:tz,month:"numeric",day:"numeric",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(ms)); }catch(e){ return "?"; } }
+function nextTile(R){
+  const here=(DB.here||"").toUpperCase(), ha=ap(here), now=Date.now();
+  const evs=[];
+  for(const f of R.flights){ if(f._depUTC!=null) evs.push({t:f._depUTC,label:`${f.airline}${f.number} ${apName(f.from)} 発`,local:`${jd(f.depDate)} ${f.depTime}`,place:apName(f.from),early:mins(f.depTime)<6*60}); }
+  for(const h of R.hotels){ const a=ap(h.airport); if(!a) continue; evs.push({t:zonedToUTC(h.checkin,"15:00",a[0]),label:`${h.name} チェックイン`,local:`${jd(h.checkin)} 15:00ごろ`,place:apName(h.airport)}); evs.push({t:zonedToUTC(h.checkout,"11:00",a[0]),label:`${h.name} チェックアウト`,local:`${jd(h.checkout)} 11:00ごろ`,place:apName(h.airport)}); }
+  const nx=evs.filter(e=>e.t>now).sort((a,b)=>a.t-b.t)[0];
+  if(!nx) return "";
+  const left=Math.round((nx.t-now)/60000), lh=Math.floor(left/60), ld=Math.floor(lh/24);
+  const leftTxt = ld>=2? `${ld}日${lh%24}時間` : `${lh}時間${left%60}分`;
+  const yours = ha? `<span class="lbl">あなたの今の時計（${esc(ha[1])}）で</span> <span class="mono">${fmtIn(nx.t,ha[0])}</span>` : `<span class="lbl">右の設定に「今いる場所」を入れると、あなたの時計での時刻を出します</span>`;
+  const today = ha? `<span class="lbl">今日は${esc(ha[1])}で</span> <span class="mono">${fmtIn(now,ha[0]).split(" ")[0]}</span>` : "";
+  return `<div class="tile span"><div class="k">次の予定</div><div class="row"><span class="mono" style="font-weight:600">${esc(nx.label)}</span><span><span class="lbl">現地（${esc(nx.place)}）で</span> <span class="mono">${esc(nx.local)}</span></span><span>${yours}</span><span><span class="lbl">あと</span> <span class="mono">${leftTxt}</span></span>${today?`<span>${today}</span>`:""}</div>${nx.early?`<div class="fine">深夜・早朝の出発です。空港へ行くのは<b>前の日の夜</b>。</div>`:""}</div>`;
+}
+
+/* ---------- ハイライト ---------- */
+function highlight(ids){
+  document.querySelectorAll(".item.hl").forEach(e=>e.classList.remove("hl"));
+  let first=null;
+  ids.filter(Boolean).forEach(id=>{ const el=document.querySelector(`.item[data-id="${CSS.escape(id)}"]`); if(el){ el.classList.add("hl"); first=first||el; } });
+  if(first) first.scrollIntoView({behavior:"smooth",block:"center"});
+}
+document.addEventListener("click",e=>{
+  const f=e.target.closest(".f,.night"); if(f&&f.dataset.ids){ highlight(f.dataset.ids.split(",")); }
+});
+
+/* ---------- フォーム ---------- */
+function showForm(kind){
+  document.querySelectorAll("#addTabs button").forEach(b=>b.classList.toggle("on",b.dataset.kind===kind));
+  $("#fFlight").hidden = kind!=="flight"; $("#fHotel").hidden = kind!=="hotel";
+}
+$("#addTabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; editingId=null; showForm(b.dataset.kind); });
+document.querySelectorAll("[data-cancel]").forEach(b=>b.addEventListener("click",()=>{ editingId=null; b.closest("form").reset(); }));
+function formData(form){ const o={}; new FormData(form).forEach((v,k)=>o[k]=String(v).trim()); return o; }
+$("#fFlight").addEventListener("submit",e=>{
+  e.preventDefault(); const t=trip(); const d=formData(e.target);
+  const it={id:editingId||uid(),type:"flight",airline:d.airline.toUpperCase(),number:d.number,from:d.from.toUpperCase(),to:d.to.toUpperCase(),depDate:d.depDate,depTime:d.depTime,arrDate:d.arrDate,arrTime:d.arrTime,pnr:d.pnr.toUpperCase(),pax:+d.pax||t.pax,note:d.note};
+  upsert(t,it); e.target.reset(); editingId=null; toast("保存しました"); render();
+});
+$("#fHotel").addEventListener("submit",e=>{
+  e.preventDefault(); const t=trip(); const d=formData(e.target);
+  const it={id:editingId||uid(),type:"hotel",kind:d.kind,name:d.name,airport:d.airport.toUpperCase(),checkin:d.checkin,checkout:d.checkout,conf:d.conf,guests:+d.guests||t.pax,note:d.note};
+  upsert(t,it); e.target.reset(); editingId=null; toast("保存しました"); render();
+});
+function upsert(t,it){ const i=t.items.findIndex(x=>x.id===it.id); if(i>=0) t.items[i]=it; else t.items.push(it); }
+$("#items").addEventListener("click",e=>{
+  const ed=e.target.closest("[data-edit]"), del=e.target.closest("[data-del]"); const t=trip();
+  if(del){ const it=t.items.find(x=>x.id===del.dataset.del); if(it && confirm(`「${it.type==="flight"?it.airline+it.number:it.name}」を削除しますか？`)){ t.items=t.items.filter(x=>x.id!==it.id); render(); } }
+  if(ed){ const it=t.items.find(x=>x.id===ed.dataset.edit); if(!it) return; editingId=it.id; showForm(it.type);
+    const form = it.type==="flight"? $("#fFlight") : $("#fHotel");
+    for(const k in it){ const el=form.elements[k]; if(el) el.value=it[k]; }
+    form.scrollIntoView({behavior:"smooth",block:"center"}); }
+});
+
+/* ---------- 旅程の操作 ---------- */
+$("#tripSel").addEventListener("change",e=>{ DB.active=e.target.value; render(); });
+$("#btnNewTrip").addEventListener("click",()=>{ const name=prompt("旅程の名前（例：バンコク 2026-11）"); if(!name) return; const t={id:uid(),name,pax:trip().pax||2,passport:trip().passport||"",alliance:"SA",items:[]}; DB.trips.push(t); DB.active=t.id; render(); });
+$("#btnRenameTrip").addEventListener("click",()=>{ const t=trip(); const name=prompt("新しい名前",t.name); if(name){ t.name=name; render(); } });
+$("#btnDelTrip").addEventListener("click",()=>{ const t=trip(); if(DB.trips.length<=1){ alert("最後の旅程は削除できません。新しい旅程を作ってから削除してください。"); return; } if(confirm(`旅程「${t.name}」を丸ごと削除しますか？`)){ DB.trips=DB.trips.filter(x=>x.id!==t.id); DB.active=DB.trips[0].id; render(); } });
+$("#setPax").addEventListener("change",e=>{ trip().pax=+e.target.value||1; render(); });
+$("#setPassport").addEventListener("change",e=>{ trip().passport=e.target.value; render(); });
+$("#setAlliance").addEventListener("change",e=>{ trip().alliance=e.target.value; render(); });
+$("#setHere").addEventListener("change",e=>{ DB.here=e.target.value.trim().toUpperCase(); render(); });
+
+/* ---------- 入出力 ---------- */
+$("#btnExport").addEventListener("click",()=>{ $("#io").value=JSON.stringify(DB,null,1); $("#io").select(); toast("書き出しました。全部コピーして保管してください"); });
+$("#btnImport").addEventListener("click",()=>{ try{ const d=sanitizeDB(JSON.parse($("#io").value)); if(!d) throw 0; if(confirm("いま保存されているデータを、貼り付けた内容で置き換えます。よいですか？")){ DB=d; render(); toast("読み込みました"); } }catch(e){ alert("読み込めませんでした。「全データを書き出す」で出た形式をそのまま貼ってください。"); } });
+$("#btnDemo").addEventListener("click",()=>{ const t=demoTrip(); DB.trips.push(t); DB.active=t.id; render(); toast("練習用の旅程を追加しました（右の検査結果を見てください）"); });
+$("#btnCopyText").addEventListener("click",async()=>{
+  const t=trip(); const R=analyze(t); const L=[];
+  L.push(`■ ${t.name}（${t.pax}名）`);
+  for(const it of [...R.flights,...R.hotels].sort((a,b)=>pd(a.depDate||a.checkin)-pd(b.depDate||b.checkin))){
+    if(it.type==="flight") L.push(`✈ ${jd(it.depDate)} ${it.depTime} ${apName(it.from)} → ${jd(it.arrDate)} ${it.arrTime} ${apName(it.to)}  ${it.airline}${it.number}  予約番号:${it.pnr||"なし"}`);
+    else L.push(`🏨 ${jd(it.checkin)}〜${jd(it.checkout)} ${it.name}（${diffDays(it.checkin,it.checkout)}泊）予約番号:${it.conf||"なし"}`);
+  }
+  L.push("— 検査結果 —");
+  for(const f of R.findings) L.push(`[${({crit:"要修正",warn:"確認",info:"提案",ok:"OK"})[f.sev]}] ${f.title}\n    → ${String(f.fix||"").replace(/<[^>]+>/g,"")}`);
+  const txt=L.join("\n");
+  try{ await navigator.clipboard.writeText(txt); toast("コピーしました"); }catch(e){ $("#io").value=txt; $("#io").select(); toast("下の欄に出しました。コピーしてください"); }
+});
+let toastT; function toast(m){ const el=$("#toast"); el.textContent=m; el.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),2400); }
+
+/* ホーム画面アプリ（PWA）：ふつうのWebサーバーに置いた時だけ有効。file:// や公開ページでは何もしない */
+if(location.protocol.startsWith("http") && "serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+render();
+</script>
