@@ -355,6 +355,46 @@ function demoTrip(){
   ];
   return t;
 }
+/* 他のAI（ChatGPT等）が出した少し違う形のJSONも受け付ける：よくある別名をこちらの形に直す */
+function normalizeIncoming(d){
+  if(!d||typeof d!=="object") return d;
+  const S=v=>(v==null?"":String(v)).trim();
+  const pick=(o,...ks)=>{ for(const k of ks){ if(o&&o[k]!=null&&o[k]!=="") return o[k]; } return undefined; };
+  const dateOf=v=>{ if(v&&typeof v==="object") v=v.date||v.value||v.local||""; v=S(v); const m=v.match(/(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})/); return m? `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}` : v.slice(0,10); };
+  const timeOf=v=>{ if(v&&typeof v==="object") v=v.time||v.value||""; v=S(v); const m=v.match(/(\d{1,2}):(\d{2})/); return m? `${m[1].padStart(2,"0")}:${m[2]}` : v; };
+  const trips = Array.isArray(d.trips)? d.trips : (Array.isArray(d.items)? [{name:d.tripName||d.name||"",items:d.items}] : []);
+  return {trips: trips.map(t=>{
+    const items=(Array.isArray(t.items)?t.items:[]).map(i=>{
+      if(!i||typeof i!=="object") return null;
+      const type=S(i.type).toLowerCase();
+      if(S(i.status).toLowerCase()==="missing"||S(i.status).toLowerCase()==="cancelled") return null;
+      if(type==="flight"){
+        let airline=S(pick(i,"airline","carrier")), number=S(pick(i,"number","flightNo"));
+        const fn=S(pick(i,"flightNumber","flight","flight_number"));
+        if(fn){ const m=fn.replace(/\s+/g,"").match(/^([A-Za-z0-9]{2})(\d{1,4})$/); if(m){ airline=airline||m[1]; number=number||m[2]; } }
+        if(!number && /^\d+$/.test(airline.slice(2))) { number=airline.slice(2); airline=airline.slice(0,2); }
+        const dep=i.departure||i.dep||{}, arr=i.arrival||i.arr||{};
+        return {type:"flight",airline:airline.toUpperCase(),number,
+          from:S(pick(i,"from","origin")||pick(dep,"code","airport","iata")).toUpperCase().slice(0,3),
+          to:S(pick(i,"to","destination")||pick(arr,"code","airport","iata")).toUpperCase().slice(0,3),
+          depDate:dateOf(pick(i,"depDate","departureDate")||pick(dep,"date")), depTime:timeOf(pick(i,"depTime","departureTime")||pick(dep,"time")),
+          arrDate:dateOf(pick(i,"arrDate","arrivalDate")||pick(arr,"date")), arrTime:timeOf(pick(i,"arrTime","arrivalTime")||pick(arr,"time")),
+          pnr:S(pick(i,"pnr","reservationNumber","confirmation","bookingRef","recordLocator")).toUpperCase(),
+          pax:+pick(i,"pax","travelers","passengers","guests")||undefined, note:S(pick(i,"note","source","notes"))};
+      }
+      if(type==="hotel"||type==="stay"||type==="lodging"){
+        return {type:"hotel",kind:["hotel","rental","home"].includes(S(i.kind))?S(i.kind):"hotel",
+          name:S(pick(i,"name","hotel","hotelName","title")),
+          airport:S(pick(i,"airport","nearestAirport","iata","code")).toUpperCase().slice(0,3),
+          checkin:dateOf(pick(i,"checkin","checkIn","checkInDate","check_in","from")), checkout:dateOf(pick(i,"checkout","checkOut","checkOutDate","check_out","to")),
+          conf:S(pick(i,"conf","reservationNumber","confirmation","confirmationNumber","bookingRef")),
+          guests:+pick(i,"guests","travelers","pax","adults")||undefined, note:S(pick(i,"note","source","notes"))};
+      }
+      return null;
+    }).filter(Boolean);
+    return {name:S(pick(t,"name","title","tripName")), pax:+pick(t,"pax","travelers")||undefined, passport:S(t.passport), alliance:t.alliance, items};
+  })};
+}
 function sanitizeDB(d){
   if(!d||!Array.isArray(d.trips)) return null;
   const D8=/^\d{4}-\d{2}-\d{2}$/, TM=/^\d{2}:\d{2}(:\d{2})?$/, ID=/^[\w-]{1,24}$/;
@@ -759,7 +799,7 @@ $("#setHere").addEventListener("change",e=>{ DB.here=e.target.value.trim().toUpp
 
 /* ---------- 入出力 ---------- */
 $("#btnExport").addEventListener("click",()=>{ $("#io").value=JSON.stringify(DB,null,1); $("#io").select(); toast("書き出しました。全部コピーして保管してください"); });
-$("#btnImport").addEventListener("click",()=>{ try{ const d=sanitizeDB(JSON.parse($("#io").value)); if(!d) throw 0; if(confirm("いま保存されているデータを、貼り付けた内容で置き換えます。よいですか？")){ DB=d; render(); toast("読み込みました"); } }catch(e){ alert("読み込めませんでした。「全データを書き出す」で出た形式をそのまま貼ってください。"); } });
+$("#btnImport").addEventListener("click",()=>{ try{ const raw=JSON.parse($("#io").value); const d=sanitizeDB(raw&&Array.isArray(raw.trips)&&raw.trips.every(t=>t&&Array.isArray(t.items)&&t.items.every(i=>i&&(i.depDate||i.checkin)))?raw:normalizeIncoming(raw)); if(!d) throw 0; if(confirm("いま保存されているデータを、貼り付けた内容で置き換えます。よいですか？")){ DB=d; render(); toast("読み込みました"); } }catch(e){ alert("読み込めませんでした。「全データを書き出す」で出た形式をそのまま貼ってください。"); } });
 $("#btnDemo").addEventListener("click",()=>{ const t=demoTrip(); DB.trips.push(t); DB.active=t.id; render(); toast("練習用の旅程を追加しました（右の検査結果を見てください）"); });
 $("#btnCopyText").addEventListener("click",async()=>{
   const t=trip(); const R=analyze(t); const L=[];
@@ -854,7 +894,7 @@ async function mailRead(){
   mailStatus("Claudeが読み取っています…（10〜60秒）",true);
   try{
     const data=await MAIL.sample.json(rules+"\n\n"+bodies.join("\n\n"),{modelTier:"default",cache:false,onText:({text})=>{ mailStatus(`Claudeが読み取っています…（${text.length}文字）`,true); }});
-    const db=sanitizeDB({trips:(data&&data.trips)||[]});
+    const db=sanitizeDB(normalizeIncoming(data||{}));
     if(!db || !db.trips.some(t=>t.items.length)){ mailStatus("予約を読み取れませんでした。"+((data&&data.unknown&&data.unknown.length)?"不明だった点："+esc(data.unknown.join(" / ")):"")); return; }
     MAIL.extracted=db;
     let html=`<div class="fine">読み取った内容です。<b>原文と見比べて</b>、入れるものにチェックを付け「取り込む」を押してください。</div>`;
