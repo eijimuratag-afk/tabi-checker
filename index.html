@@ -408,7 +408,7 @@ function sanitizeDB(d){
       if(i.type==="hotel"){ if(!(D8.test(S(i.checkin))&&D8.test(S(i.checkout))&&S(i.name))) return null;
         return {id,type:"hotel",kind:["hotel","rental","home"].includes(i.kind)?i.kind:"hotel",name:S(i.name),airport:S(i.airport).toUpperCase(),checkin:S(i.checkin),checkout:S(i.checkout),conf:S(i.conf),guests:+i.guests>0?+i.guests:undefined,note:S(i.note)}; }
       return null; }).filter(Boolean)}));
-  if(!trips.length) return null;
+  if(!trips.length || !trips.some(t=>t.items.length)) return null; // 中身が0件なら失敗扱い（既存データを消さない）
   const here=S(d.here).toUpperCase(); return {active:trips.some(t=>t.id===d.active)?d.active:trips[0].id,trips,here:/^[A-Z]{3}$/.test(here)?here:""};
 }
 function load(){
@@ -799,7 +799,8 @@ $("#setHere").addEventListener("change",e=>{ DB.here=e.target.value.trim().toUpp
 
 /* ---------- 入出力 ---------- */
 $("#btnExport").addEventListener("click",()=>{ $("#io").value=JSON.stringify(DB,null,1); $("#io").select(); toast("書き出しました。全部コピーして保管してください"); });
-$("#btnImport").addEventListener("click",()=>{ try{ const raw=JSON.parse($("#io").value); const d=sanitizeDB(raw&&Array.isArray(raw.trips)&&raw.trips.every(t=>t&&Array.isArray(t.items)&&t.items.every(i=>i&&(i.depDate||i.checkin)))?raw:normalizeIncoming(raw)); if(!d) throw 0; if(confirm("いま保存されているデータを、貼り付けた内容で置き換えます。よいですか？")){ DB=d; render(); toast("読み込みました"); } }catch(e){ alert("読み込めませんでした。「全データを書き出す」で出た形式をそのまま貼ってください。"); } });
+$("#btnImport").addEventListener("click",()=>{ try{ const raw=JSON.parse($("#io").value); const d=sanitizeDB(raw&&Array.isArray(raw.trips)&&raw.trips.every(t=>t&&Array.isArray(t.items)&&t.items.every(i=>i&&(i.depDate||i.checkin)))?raw:normalizeIncoming(raw)); if(!d) throw 0; const cnt=d.trips.reduce((a,t)=>a+t.items.length,0); if(confirm(`便・ホテル ${cnt} 件を読み取りました。いま保存されているデータ（${DB.trips.reduce((a,t)=>a+t.items.length,0)} 件）を、この内容で置き換えます。よいですか？
+（残したい場合は先に「全データを書き出す」でコピーを取ってください）`)){ DB=d; render(); toast(`読み込みました（${cnt}件）`); } }catch(e){ alert("読み込めませんでした。便・ホテルが1件も読み取れないか、形式が違います。日付(YYYY-MM-DD)と時刻(HH:MM)が空欄の便は取り込めません。"); } });
 $("#btnDemo").addEventListener("click",()=>{ const t=demoTrip(); DB.trips.push(t); DB.active=t.id; render(); toast("練習用の旅程を追加しました（右の検査結果を見てください）"); });
 $("#btnCopyText").addEventListener("click",async()=>{
   const t=trip(); const R=analyze(t); const L=[];
