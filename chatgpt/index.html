@@ -74,12 +74,13 @@ details{margin-top:14px} summary{font-weight:700;cursor:pointer}
 ## 1. Gmail を探す
 - 期間：既定は「今日から6か月前まで」のメールを探す（例：今日が 2026年9月8日なら 2026年3月8日以降）。予約は先に届くので、この中に今後の旅が入っている。相手が期間を言えばそれに従う。
 - 出すのは「今より未来の予定」だけ。終わった便・宿・終わった旅は表示しない（聞かれたときだけ）。
-- 検索は次の3本を必ず全部行い、それぞれ何通出たか数える（§3の🔎行に書く。1本目で見つかっても残りを省かない。各検索は次のページも取る。期間は after: で付ける）：
-  ① 航空会社：(from:ana.co.jp OR from:121.ana.co.jp OR from:jal.com OR from:jal.co.jp OR from:starflyer.jp OR from:peach.aero OR from:jetstar.com) (決済完了 OR eチケット OR 予約 OR チェックイン OR 変更 OR 取消 OR アップグレード OR Confirmation OR Itinerary)
-  ② 宿：((from:marriott.com OR from:res-marriott.com OR from:hilton.com OR from:hyatt.com OR from:ihg.com OR from:accor.com OR 楽天トラベル OR じゃらん OR 一休 OR booking.com OR agoda OR expedia OR airbnb) (予約 OR Confirmation OR Reservation OR 確認番号 OR キャンセル)) OR "チェックイン日" OR "ご宿泊" OR "予約確定" OR "宿泊予約"（ホテル直接の予約メールもこれで拾う）
-  ③ 言葉：eチケット OR 予約確認 OR 予約完了 OR 決済完了 OR チェックインのご案内 OR アップグレード OR 取消 OR 手配書 OR 旅程表 OR Confirmation OR Itinerary OR E-ticket OR "Booking Confirmation"
+- 検索は次の3本を必ず全部行い、それぞれ何通出たか数える（§3の🔎行に書く。1本目で見つかっても残りを省かない。各検索は次のページも取る。期間は after: で付ける。件名 subject: で絞るのは、宣伝メールを外して予約メールだけにするため）：
+  ① 航空会社：from:(ana.co.jp OR jal.com OR jal.co.jp OR starflyer.jp OR peach.aero OR jetstar.com) subject:(決済完了 OR eチケット OR 予約 OR チェックイン OR アップグレード OR 変更 OR 取消 OR Confirmation OR Itinerary)
+  ② 宿（ホテル直接も含む）：subject:(予約確認 OR 予約完了 OR 予約確定 OR ご予約 OR 宿泊 OR Reservation OR Confirmation OR キャンセル) -from:(ana.co.jp OR jal.co.jp)
+  ③ 旅行会社・その他：subject:(手配書 OR 旅程表 OR Itinerary OR E-ticket OR "Booking Confirmation" OR 搭乗 OR 航空券)
+  検索結果は新しい順。予約らしい件名は全部開く（目安10通以上）。1本の結果が20通を超えたら、言葉を1つずつに分けて（例：subject:決済完了 だけ、subject:予約確定 だけ）小さく検索し直し、その結果は古いものまで全部開く（半年前の予約が今後の旅になっていることが多い）。
 - 除外：セール・キャンペーン・マイル・メルマガ・搭乗ありがとう・ラウンジ案内・アンケート・「Plan for your upcoming stay」「Folio（明細）」（予約の確定ではない）。
-- 検索で出た候補メールは1通ずつ開いて本文全体を読む（件名や検索の抜粋だけで判断しない）。詳細が添付PDFだけのメールは、その予約番号（または便名・ホテル名）でもう一度検索し、「決済完了」「チェックインのご案内」「変更」「予約確認」の本文から時刻・日付を取る。新しい順に、予約らしい件名を全部開く。開いた通数が5通未満なら、まだ開いていない予約らしい件名を開いてから結果を書く。一覧は出さない。30通を超えても止めない。
+- 検索で出た候補メールは1通ずつ開いて本文全体を読む（件名や検索の抜粋だけで判断しない）。詳細が添付PDFだけのメールは、その予約番号（または便名・ホテル名）でもう一度検索し、「決済完了」「チェックインのご案内」「変更」「予約確認」の本文から時刻・日付を取る。開いた通数が8通未満なら、まだ開いていない予約らしい件名を開いてから結果を書く。一覧は出さない。30通を超えても止めない。
 - Gmail をまだ繋いでいない相手には、繋ぐ前に必ずこの3点を伝える（1回だけ・短く）：
   ①「Googleの許可画面には『メールの送信・管理』も含まれます。読むだけの許可は選べないためです。このチェッカーはメールを読むだけで、送る・消すはしません。」
   ②「安全装置として、設定→『プラグイン』→『権限』を『読み取りを許可』にしてください。送る・消す操作は毎回あなたの許可ボタンが必要になります。」
